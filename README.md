@@ -1,4 +1,4 @@
-# JsonFlow / JsonFlow4D for Delphi
+# JsonFlow for Delphi
 
 [![Delphi Supported Versions](https://img.shields.io/badge/Delphi%20Supported%20Versions-XE%2B-blue.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -10,7 +10,7 @@
 
 ## 🇬🇧 English
 
-**JsonFlow** (internally declared as **JsonFlow4D**) is a state-of-the-art, high-performance, and feature-rich JSON manipulation, serialization, and JSON Schema validation framework for Delphi. 
+**JsonFlow** is a state-of-the-art, high-performance, and feature-rich JSON manipulation, serialization, and JSON Schema validation framework for Delphi. 
 
 It provides an enterprise-grade toolkit that integrates high-speed serialization, persistent caches, multi-threaded validation, and dynamic JSON reading/writing under a unified, fluent API.
 
@@ -138,7 +138,7 @@ Issues and pull requests are welcome. Feel free to fork the repository and submi
 
 ## 🇧🇷 Português
 
-**JsonFlow** (declarado internamente como **JsonFlow4D**) é um framework de manipulação, serialização e validação de JSON Schema Draft 7 de alto desempenho e rico em recursos para Delphi.
+**JsonFlow** é um framework de manipulação, serialização e validação de JSON Schema Draft 7 de alto desempenho e rico em recursos para Delphi.
 
 Ele oferece uma caixa de ferramentas corporativa que integra serialização de alta velocidade, caches persistentes, validação multi-thread e leitura/escrita dinâmica de JSON sob uma API fluente e unificada.
 
