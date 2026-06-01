@@ -1,6 +1,7 @@
 # JsonFlow for Delphi
 
-[![Delphi Supported Versions](https://img.shields.io/badge/Delphi%20Supported%20Versions-XE%2B-blue.svg)]()
+[![Delphi XE+](https://img.shields.io/badge/Delphi-XE%20or%20superior-blue.svg)]()
+[![Lazarus Compatible](https://img.shields.io/badge/Lazarus-Compatible-orange.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 *   [🇬🇧 English](#-english)
@@ -10,28 +11,37 @@
 
 ## 🇬🇧 English
 
-**JsonFlow** is a state-of-the-art, high-performance, and feature-rich JSON manipulation, serialization, and JSON Schema validation framework for Delphi. 
-
-It provides an enterprise-grade toolkit that integrates high-speed serialization, persistent caches, multi-threaded validation, and dynamic JSON reading/writing under a unified, fluent API.
-
-### 🏛 Supported Platforms
-*   **Delphi XE or superior** (VCL, FMX, Console, Multi-Threaded)
-*   **Lazarus / FreePascal** (Compatible Core)
-
----
+**JsonFlow** is a state-of-the-art, high-performance, and feature-rich JSON manipulation, serialization, and JSON Schema validation framework for Delphi and Lazarus. It provides an enterprise-ready toolkit that integrates high-speed object serialization, in-place dynamic JSON editing, and robust Draft 7 JSON Schema validation under a unified, elegant, and fluent API. By incorporating custom navigation caching, batch mode optimizations, and multi-threaded object pooling, JsonFlow delivers unmatched native parsing and validation speeds for intensive web applications, APIs, and microservices.
 
 ### 🚀 Key Features
 
-*   **Advanced Serialization & Deserialization:** Automatic conversion between Delphi objects and JSON structures using custom attributes, mapping rules, and extensible serialization pipelines.
-*   **Dynamic JSON Reader & Writer:** Modifies JSON structures in-place. Traverse nested elements fluidly using path strings (e.g., `user.address[0].zip`).
-*   **Draft 7 JSON Schema Validation:** Complete validation of JSON structures against JSON Schema Draft 7 specifications with detailed local error paths (`Path` and `SchemaPath`).
-*   **Optimized Native Performance:**
-    *   **Navigation Cache:** Up to 2.5x speed improvements for repeating paths.
-    *   **Batch Mode:** Up to 3.4x faster operations for bulk updates.
-    *   **Object Pooling:** Multi-threaded pooled composers yielding up to 3.0x faster creation/destruction cycles.
-*   **Extensible Middleware System:** Customize serialization pipelines, encrypt sensitive fields, or format custom structures (e.g., CPF, CNPJ, dates) on the fly.
-*   **Advanced Observability & Metrics:** High-precision logging, metrics, and multi-format validation reporting (HTML, XML, CSV, PDF).
-*   **Asynchronous Validation:** Multi-threaded thread-safe background validator with priority queues.
+*   **Advanced Serialization & Deserialization:** Fluidly convert Delphi objects to JSON structures and vice-versa using custom attributes, mapping rules, and extensible pipelines.
+*   **In-Place Dynamic Composer:** Load and modify complex JSON structures in-place. Traverse nested elements fluidly using path strings (e.g., `user.address[0].zip`).
+*   **Draft 7 JSON Schema Validation:** Fully validate JSON structures against Draft 7 specifications with detailed local error paths (`Path` and `SchemaPath`).
+*   **Massive Performance Enhancements:**
+    *   *Navigation Cache:* Up to 2.5x speed improvements for repeating JSON path traversals.
+    *   *Batch Processing:* Up to 3.4x faster operations for bulk updates.
+    *   *Object Pooling:* Thread-safe pooled composers yielding up to 3.0x faster creation/destruction cycles.
+*   **Extensible Middleware System:** Intercept, encrypt, decrypt, or format specific JSON fields (e.g., dates, currency, custom types) on the fly.
+*   **Asynchronous Validation Queue:** Multi-threaded, thread-safe background schema validation with prioritization.
+
+### 🏛 Compatibility Matrix
+
+| Environment / IDE | Platform / Compiler | Draft 7 Validator | Object Pooling |
+| :--- | :--- | :---: | :---: |
+| **Delphi XE or superior** | VCL, FMX, Console (Win/Linux/macOS/iOS/Android) | ✅ Yes | ✅ Yes |
+| **Lazarus / FreePascal** | LCL, Console (Cross-platform) | ✅ Yes | ✅ Yes |
+
+### ⚙️ Installation
+
+To install using the package manager [**Boss**](https://github.com/HashLoad/boss):
+
+```sh
+boss install JsonFlow4D
+```
+
+> [!NOTE]
+> For historical registry reasons on Boss, the package name is declared as **JsonFlow4D** in its manifest, but the official framework name is **JsonFlow**.
 
 ---
 
@@ -65,7 +75,7 @@ begin
 end;
 ```
 
-#### 2. In-Place Dynamic Reading & Updating (Composer)
+#### 2. In-Place Dynamic Updating (TJSONComposer)
 ```delphi
 uses
   JsonFlow.Composer;
@@ -80,13 +90,12 @@ begin
   try
     LComposer.LoadJSON(LJsonInput);
     
-    // Enable performance optimizations
-    LComposer.EnableCache(1000);
+    LComposer.EnableCache(1000); // Navigation cache optimization
     LComposer.BeginBatch;
     try
-      LComposer.SetValue('user.age', 31); // Update age
-      LComposer.AddToArray('tags', 'lead'); // Add tag
-      LComposer.SetValue('user.email', 'john@email.com'); // Insert new key
+      LComposer.SetValue('user.age', 31);
+      LComposer.AddToArray('tags', 'lead');
+      LComposer.SetValue('user.email', 'john@email.com');
     finally
       LComposer.EndBatch;
     end;
@@ -98,7 +107,7 @@ begin
 end;
 ```
 
-#### 3. Asynchronous Draft 7 JSON Schema Validation
+#### 3. Draft 7 JSON Schema Validation
 ```delphi
 uses
   JsonFlow.SchemaValidator,
@@ -111,8 +120,8 @@ var
 begin
   LValidator := TSchemaValidator.Create;
   try
-    LSchema := TJSONElement.ParseFromString('{ "type": "object", "properties": { "name": {"type": "string", "minLength": 2} }, "required": ["name"] }');
-    LData := TJSONElement.ParseFromString('{ "name": "A" }'); // Too short!
+    LSchema := TJSONElement.ParseFromString('{"type":"object","properties":{"name":{"type":"string","minLength":2}},"required":["name"]}');
+    LData := TJSONElement.ParseFromString('{"name":"A"}'); // Fails minLength
     
     LValidator.Schema := LSchema;
     LErrors := LValidator.Validate(LData);
@@ -127,35 +136,39 @@ end;
 
 ---
 
-### ⛏️ Contributing
-Issues and pull requests are welcome. Feel free to fork the repository and submit your changes.
-
-### 📬 Contact & Support
-*   **Telegram**: [HashLoad Channel](https://t.me/hashload)
-*   **Website**: [isaquepinheiro.com.br](https://www.isaquepinheiro.com.br)
-
----
-
 ## 🇧🇷 Português
 
-**JsonFlow** é um framework de manipulação, serialização e validação de JSON Schema Draft 7 de alto desempenho e rico em recursos para Delphi.
-
-Ele oferece uma caixa de ferramentas corporativa que integra serialização de alta velocidade, caches persistentes, validação multi-thread e leitura/escrita dinâmica de JSON sob uma API fluente e unificada.
-
----
+**JsonFlow** é um framework moderno, de alta performance e rico em recursos para manipulação, serialização e validação de JSON Schema Draft 7 em Delphi e Lazarus. Ele fornece um toolkit robusto e corporativo que integra perfeitamente serialização ultra-rápida de objetos, escrita e leitura dinâmica in-place e validação estruturada. Equipado com cache de navegação inteligente, otimizações em lote (batch processing) e pool de objetos multi-thread, o JsonFlow oferece taxas de vazão incomparáveis para servidores, microsserviços e APIs construídas em Object Pascal.
 
 ### 🚀 Recursos Principais
 
-*   **Serialização e Deserialização Avançada:** Conversão automática entre objetos Delphi e strings JSON utilizando atributos personalizados, regras de mapeamento inteligentes e pipelines de processamento.
-*   **Leitura e Escrita Dinâmica de JSON (Composer):** Permite ler e modificar dados JSON in-place em tempo de execução de forma encadeável usando caminhos intuitivos (ex: `usuario.endereco[0].cep`).
-*   **Validação Completa de JSON Schema Draft 7:** Validação robusta de JSONs contra especificações Draft 7 com gravação detalhada de caminhos dos erros (`Path` e `SchemaPath`).
-*   **Melhorias Nativas de Performance:**
-    *   **Cache de Navegação:** Até 2.5x mais rápido para rotas repetitivas.
-    *   **Operações em Lote (Batch):** Até 3.4x mais rápido para atualizações em massa.
-    *   **Pool de Objetos:** TPooledJSONComposer nativo multi-thread proporcionando até 3.0x mais velocidade em loops intensivos.
-*   **Sistema de Middlewares Extensível:** Customize serializações de forma integrada, criptografe campos sensíveis no fluxo de dados ou formate datas de forma global.
-*   **Alta Observabilidade:** Rastreamento de latência e hit rate de caches, com geração de relatórios de validação estruturados (HTML com gráficos, PDF, CSV, XML, JSON).
-*   **Validação Assíncrona:** Fila de validação thread-safe rodando em background com controle de prioridades.
+*   **Serialização e Deserialização Avançada:** Conversão automatizada de objetos Delphi para JSON e vice-versa usando atributos customizados e pipelines extensíveis.
+*   **Composer Dinâmico In-Place:** Carregue e modifique estruturas JSON em tempo de execução usando strings de caminho simples e legíveis (ex: `usuario.endereco[0].cep`).
+*   **Validação de JSON Schema Draft 7:** Valide seus dados JSON contra especificações Draft 7 com mapeamento detalhado dos erros (`Path` e `SchemaPath`).
+*   **Otimizações Nativas de Performance:**
+    *   *Cache de Navegação:* Busca de caminhos repetitivos até 2.5x mais rápida.
+    *   *Batch Processing:* Atualizações em massa no JSON até 3.4x mais rápidas.
+    *   *Object Pooling:* TPooledJSONComposer seguro para multi-threads com velocidade 3x superior em laços intensivos.
+*   **Middlewares de Processamento:** Criptografe, descriptografe ou formate campos de JSON (como CPFs, CNPJs e datas) dinamicamente no fluxo.
+*   **Fila de Validação Assíncrona:** Fila thread-safe em segundo plano para validação em lote com controle de priorização de tarefas.
+
+### 🏛 Matriz de Compatibilidade
+
+| Ambiente / IDE | Plataforma / Compilador | Validador Draft 7 | Pooling de Objetos |
+| :--- | :--- | :---: | :---: |
+| **Delphi XE ou superior** | VCL, FMX, Console (Win/Linux/macOS/iOS/Android) | ✅ Sim | ✅ Sim |
+| **Lazarus / FreePascal** | LCL, Console (Multiplataforma) | ✅ Sim | ✅ Sim |
+
+### ⚙️ Instalação
+
+Para instalar usando o gerenciador de pacotes [**Boss**](https://github.com/HashLoad/boss):
+
+```sh
+boss install JsonFlow4D
+```
+
+> [!NOTE]
+> Por motivos históricos de registro no Boss, o pacote é declarado como **JsonFlow4D** no manifesto, embora o nome oficial do projeto seja **JsonFlow**.
 
 ---
 
@@ -189,7 +202,7 @@ begin
 end;
 ```
 
-#### 2. Edição Dinâmica e Otimizada de JSON (TJSONComposer)
+#### 2. Edição Dinâmica In-Place (TJSONComposer)
 ```delphi
 uses
   JsonFlow.Composer;
@@ -204,13 +217,12 @@ begin
   try
     LComposer.LoadJSON(LJsonInput);
     
-    // Ativa otimizações nativas
-    LComposer.EnableCache(1000);
+    LComposer.EnableCache(1000); // Ativa cache de caminhos
     LComposer.BeginBatch;
     try
-      LComposer.SetValue('usuario.idade', 31); // Atualiza idade
-      LComposer.AddToArray('tags', 'lead'); // Adiciona tag
-      LComposer.SetValue('usuario.email', 'joao@email.com'); // Insere nova chave
+      LComposer.SetValue('usuario.idade', 31);
+      LComposer.AddToArray('tags', 'lead');
+      LComposer.SetValue('usuario.email', 'joao@email.com');
     finally
       LComposer.EndBatch;
     end;
@@ -235,8 +247,8 @@ var
 begin
   LValidator := TSchemaValidator.Create;
   try
-    LSchema := TJSONElement.ParseFromString('{ "type": "object", "properties": { "nome": {"type": "string", "minLength": 2} }, "required": ["nome"] }');
-    LData := TJSONElement.ParseFromString('{ "nome": "J" }'); // Nome curto demais!
+    LSchema := TJSONElement.ParseFromString('{"type":"object","properties":{"name":{"type":"string","minLength":2}},"required":["name"]}');
+    LData := TJSONElement.ParseFromString('{"name":"A"}'); // Falha no minLength
     
     LValidator.Schema := LSchema;
     LErrors := LValidator.Validate(LData);
@@ -248,15 +260,6 @@ begin
   end;
 end;
 ```
-
----
-
-### ⛏️ Contribuição
-Adoramos contribuições! Sinta-se à vontade para abrir issues ou enviar pull requests.
-
-### 📬 Contato & Suporte
-*   **Telegram**: [Canal HashLoad](https://t.me/hashload)
-*   **Website**: [isaquepinheiro.com.br](https://www.isaquepinheiro.com.br)
 
 ---
 *Copyright © 2025-2026 Isaque Pinheiro. Licensed under MIT License.*
