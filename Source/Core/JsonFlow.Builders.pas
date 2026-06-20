@@ -153,6 +153,7 @@ type
     class function ValueToJson(const AValue: Variant): String; inline;
     class property OnSetValue: TNotifyEventSetValue read FNotifyEventSetValue write FNotifyEventSetValue;
     class property OnGetValue: TNotifyEventGetValue read FNotifyEventGetValue write FNotifyEventGetValue;
+    class procedure ClearMiddlewares;
   end;
 
 var
@@ -524,6 +525,11 @@ end;
 class destructor TJsonBuilder.Destroy;
 begin
   FMiddlwareList.Free;
+end;
+
+class procedure TJsonBuilder.ClearMiddlewares;
+begin
+  FMiddlwareList.Clear;
 end;
 
 function TJsonBuilder.DynArrayDoubleToJson(const AValue: TValue): String;

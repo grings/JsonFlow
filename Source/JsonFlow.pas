@@ -22,102 +22,154 @@ unit JsonFlow;
 interface
 
 uses
-  System.Rtti,
   SysUtils,
-  StrUtils,
   Classes,
-  Variants,
   Generics.Collections,
   JsonFlow.Utils,
   JsonFlow.Types,
   JsonFlow.Interfaces,
-  JsonFlow.Writer,
   JsonFlow.Reader,
+  JsonFlow.Writer,
+  JsonFlow.Serializer,
   JsonFlow.Builders;
 
 type
   TJsonFlow = class
   strict private
+    // Instance state
+    FReader: TJSONReader;
+    FWriter: TJSONWriter;
+    FSerializer: TJSONSerializer;
+  strict private
+    // Class state
     class var FJsonBuilder: TJsonBuilder;
-    class var FJsonWriter: IJsonWriter;
-    class var FJsonReader: IJsonReader;
     class procedure _SetNotifyEventGetValue(const Value: TNotifyEventGetValue); static; inline;
     class procedure _SetNotifyEventSetValue(const Value: TNotifyEventSetValue); static; inline;
     class procedure _SetFormatSettings(const Value: TFormatSettings); static; inline;
     class function _GetFormatSettings: TFormatSettings; static; inline;
   public
+    // Instance lifecycle
+    constructor Create; overload;
+    constructor Create(const AFormatSettings: TFormatSettings); overload;
+    destructor Destroy; override;
+
+    // Instance methods — parse / emit
+    function Parse(const AJson: string): IJSONElement;
+    function ToJson(const AElement: IJSONElement; const AIdent: Boolean = False): string;
+
+    // Instance methods — object serialization
+    function FromObject(AObject: TObject; const AStoreClass: Boolean = False): IJSONElement;
+    function ToObject(const AElement: IJSONElement; AObject: TObject): Boolean;
+
+    // Instance logging
+    procedure OnLog(const ALogProc: TProc<string>);
+
+  public
+    // Class lifecycle
     class constructor Create;
     class destructor Destroy;
+
+    // Class methods — object <-> JSON string (delegate to FJsonBuilder)
     class function ObjectToJsonString(AObject: TObject;
-      AStoreClassName: Boolean = False): String; inline;
+      AStoreClassName: Boolean = False): string; inline;
     class function ObjectListToJsonString(AObjectList: TObjectList<TObject>;
-      AStoreClassName: Boolean = False): String; overload; inline;
+      AStoreClassName: Boolean = False): string; overload; inline;
     class function ObjectListToJsonString<T: class, constructor>(AObjectList: TObjectList<T>;
-      AStoreClassName: Boolean = False): String; overload; inline;
-    class function JsonToObject<T: class, constructor>(const AJson: String): T; overload; inline;
+      AStoreClassName: Boolean = False): string; overload; inline;
+
+    // Class methods — JSON string -> object (delegate to FJsonBuilder)
+    class function JsonToObject<T: class, constructor>(const AJson: string): T; overload; inline;
     class function JsonToObject<T: class>(const AObject: T;
-      const AJson: String): Boolean; overload; inline;
-    class function JsonToObjectList<T: class, constructor>(const AJson: String): TObjectList<T>; overload; inline;
-    class function JsonToObjectList(const AJson: String; const AType: TClass): TObjectList<TObject>; overload; inline;
-    class procedure JsonToObject(const AJson: String; AObject: TObject); overload; inline;
-    // Write
-    class function BeginObject(const AValue: String = ''): IJsonWriter; inline;
-    class function BeginArray: IJsonWriter; inline;
-    // Reader
-    class procedure ParseFromFile(const AFileName: String; const AUtf8: Boolean = True); inline;
-    class procedure SaveJsonToFile(const AFileName: String; const AUtf8: Boolean = True); inline;
-    class function Write: IJsonWriter; inline;
-    class function Reader: IJsonReader; inline;
-    // Middlewares GetValue/SetValue
+      const AJson: string): Boolean; overload; inline;
+    class procedure JsonToObject(const AJson: string; AObject: TObject); overload; inline;
+    class function JsonToObjectList<T: class, constructor>(const AJson: string): TObjectList<T>; overload; inline;
+    class function JsonToObjectList(const AJson: string; const AType: TClass): TObjectList<TObject>; overload; inline;
+
+    // Middleware management
     class procedure AddMiddleware(const AEventMiddleware: IEventMiddleware);
-    {$MESSAGE WARN 'This property [OnSetValue] has been deprecated, Use middlewares instead.'}
+    class procedure ClearMiddlewares;
+
+    // Deprecated notify events — kept for source compatibility, delegate to FJsonBuilder
+    {$MESSAGE WARN 'This property [OnSetValue] has been deprecated. Use middlewares instead.'}
     class property OnSetValue: TNotifyEventSetValue write _SetNotifyEventSetValue;
-    {$MESSAGE WARN 'This property [OnGetValue] has been deprecated, Use middlewares instead.'}
+    {$MESSAGE WARN 'This property [OnGetValue] has been deprecated. Use middlewares instead.'}
     class property OnGetValue: TNotifyEventGetValue write _SetNotifyEventGetValue;
+
+    // Global format settings
     class property FormatSettings: TFormatSettings read _GetFormatSettings write _SetFormatSettings;
   end;
 
 implementation
 
-{ TJsonFlow }
+{ TJsonFlow — instance }
 
-class procedure TJsonFlow.AddMiddleware(const AEventMiddleware: IEventMiddleware);
+constructor TJsonFlow.Create;
 begin
-  FJsonBuilder.AddMiddleware(AEventMiddleware);
+  inherited Create;
+  FReader     := TJSONReader.Create;
+  FWriter     := TJSONWriter.Create;
+  FSerializer := TJSONSerializer.Create;
 end;
 
-class function TJsonFlow.BeginArray: IJsonWriter;
+constructor TJsonFlow.Create(const AFormatSettings: TFormatSettings);
 begin
-  Result := FJsonWriter.BeginArray;
+  inherited Create;
+  FReader     := TJSONReader.Create(AFormatSettings);
+  FWriter     := TJSONWriter.Create(AFormatSettings);
+  FSerializer := TJSONSerializer.Create(AFormatSettings);
 end;
 
-class function TJsonFlow.BeginObject(const AValue: String = ''): IJsonWriter;
+destructor TJsonFlow.Destroy;
 begin
-  Result := FJsonWriter.BeginObject(AValue);
+  FSerializer.Free;
+  FWriter.Free;
+  FReader.Free;
+  inherited;
 end;
+
+function TJsonFlow.Parse(const AJson: string): IJSONElement;
+begin
+  // EJsonFlowParseError propagates unmodified — no shim.
+  Result := FReader.Read(AJson);
+end;
+
+function TJsonFlow.ToJson(const AElement: IJSONElement; const AIdent: Boolean): string;
+begin
+  Result := FWriter.Write(AElement, AIdent);
+end;
+
+function TJsonFlow.FromObject(AObject: TObject; const AStoreClass: Boolean): IJSONElement;
+begin
+  Result := FSerializer.FromObject(AObject, AStoreClass);
+end;
+
+function TJsonFlow.ToObject(const AElement: IJSONElement; AObject: TObject): Boolean;
+begin
+  Result := FSerializer.ToObject(AElement, AObject);
+end;
+
+procedure TJsonFlow.OnLog(const ALogProc: TProc<string>);
+begin
+  FReader.OnLog(ALogProc);
+  FWriter.OnLog(ALogProc);
+  FSerializer.OnLog(ALogProc);
+end;
+
+{ TJsonFlow — class }
 
 class constructor TJsonFlow.Create;
 begin
   FJsonBuilder := TJsonBuilder.Create;
-  FJsonWriter := TJsonWriter.Create(FJsonBuilder);
-  FJsonReader := TJsonReader.Create;
 end;
 
 class destructor TJsonFlow.Destroy;
 begin
   FJsonBuilder.Free;
-  inherited;
 end;
 
 class function TJsonFlow._GetFormatSettings: TFormatSettings;
 begin
   Result := GJsonFlowFormatSettings;
-end;
-
-class procedure TJsonFlow.SaveJsonToFile(const AFileName: String;
-  const AUtf8: Boolean);
-begin
-  FJsonReader.SaveJsonToFile(AFileName, AUtf8);
 end;
 
 class procedure TJsonFlow._SetFormatSettings(const Value: TFormatSettings);
@@ -130,24 +182,19 @@ begin
   FJsonBuilder.OnGetValue := Value;
 end;
 
-class procedure TJsonFlow.JsonToObject(const AJson: String; AObject: TObject);
+class procedure TJsonFlow._SetNotifyEventSetValue(const Value: TNotifyEventSetValue);
 begin
-  FJsonBuilder.JSONToObject(AObject, AJson);
+  FJsonBuilder.OnSetValue := Value;
 end;
 
-class function TJsonFlow.JsonToObject<T>(const AObject: T;
-  const AJson: String): Boolean;
+class function TJsonFlow.ObjectToJsonString(AObject: TObject;
+  AStoreClassName: Boolean): string;
 begin
-  Result := FJsonBuilder.JSONToObject(TObject(AObject), AJson);
-end;
-
-class function TJsonFlow.JsonToObject<T>(const AJson: String): T;
-begin
-  Result := FJsonBuilder.JSONToObject<T>(AJson);
+  Result := FJsonBuilder.ObjectToJSON(AObject, AStoreClassName);
 end;
 
 class function TJsonFlow.ObjectListToJsonString(AObjectList: TObjectList<TObject>;
-  AStoreClassName: Boolean): String;
+  AStoreClassName: Boolean): string;
 var
   LFor: Integer;
   LResultBuilder: TStringBuilder;
@@ -155,11 +202,11 @@ begin
   LResultBuilder := TStringBuilder.Create;
   try
     LResultBuilder.Append('[');
-    for LFor := 0 to AObjectList.Count -1 do
+    for LFor := 0 to AObjectList.Count - 1 do
     begin
-      LResultBuilder.Append(ObjectToJsonString(AObjectList.Items[LFor], AStoreClassName));
-      if LFor < AObjectList.Count -1 then
-       LResultBuilder.Append(', ');
+      LResultBuilder.Append(FJsonBuilder.ObjectToJSON(AObjectList.Items[LFor], AStoreClassName));
+      if LFor < AObjectList.Count - 1 then
+        LResultBuilder.Append(',');
     end;
     LResultBuilder.ReplaceLastChar(']');
     Result := LResultBuilder.ToString;
@@ -169,7 +216,7 @@ begin
 end;
 
 class function TJsonFlow.ObjectListToJsonString<T>(AObjectList: TObjectList<T>;
-  AStoreClassName: Boolean): String;
+  AStoreClassName: Boolean): string;
 var
   LFor: Integer;
   LResultBuilder: TStringBuilder;
@@ -177,11 +224,11 @@ begin
   LResultBuilder := TStringBuilder.Create;
   try
     LResultBuilder.Append('[');
-    for LFor := 0 to AObjectList.Count -1 do
+    for LFor := 0 to AObjectList.Count - 1 do
     begin
       LResultBuilder.Append(FJsonBuilder.ObjectToJSON(AObjectList.Items[LFor] as T, AStoreClassName));
-      if LFor < AObjectList.Count -1 then
-        LResultBuilder.Append(', ');
+      if LFor < AObjectList.Count - 1 then
+        LResultBuilder.Append(',');
     end;
     LResultBuilder.ReplaceLastChar(']');
     Result := LResultBuilder.ToString;
@@ -190,42 +237,40 @@ begin
   end;
 end;
 
-class function TJsonFlow.ObjectToJsonString(AObject: TObject;
-  AStoreClassName: Boolean): String;
+class function TJsonFlow.JsonToObject<T>(const AJson: string): T;
 begin
-  Result := FJsonBuilder.ObjectToJSON(AObject, AStoreClassName);
+  Result := FJsonBuilder.JsonToObject<T>(AJson);
 end;
 
-class procedure TJsonFlow.ParseFromFile(const AFileName: String;
-  const AUtf8: Boolean);
+class function TJsonFlow.JsonToObject<T>(const AObject: T; const AJson: string): Boolean;
 begin
-  FJsonReader.ParseFromFile(AFileName, AUtf8);
+  Result := FJsonBuilder.JsonToObject(TObject(AObject), AJson);
 end;
 
-class function TJsonFlow.Reader: IJsonReader;
+class procedure TJsonFlow.JsonToObject(const AJson: string; AObject: TObject);
 begin
-  Result := FJsonReader;
+  FJsonBuilder.JsonToObject(AObject, AJson);
 end;
 
-class procedure TJsonFlow._SetNotifyEventSetValue(const Value: TNotifyEventSetValue);
+class function TJsonFlow.JsonToObjectList<T>(const AJson: string): TObjectList<T>;
 begin
-  FJsonBuilder.OnSetValue := Value;
+  Result := FJsonBuilder.JsonToObjectList<T>(AJson);
 end;
 
-class function TJsonFlow.Write: IJsonWriter;
-begin
-  Result := FJsonWriter;
-end;
-
-class function TJsonFlow.JsonToObjectList(const AJson: String;
+class function TJsonFlow.JsonToObjectList(const AJson: string;
   const AType: TClass): TObjectList<TObject>;
 begin
   Result := FJsonBuilder.JsonToObjectList(AJson, AType);
 end;
 
-class function TJsonFlow.JsonToObjectList<T>(const AJson: String): TObjectList<T>;
+class procedure TJsonFlow.AddMiddleware(const AEventMiddleware: IEventMiddleware);
 begin
-  Result := FJsonBuilder.JsonToObjectList<T>(AJson);
+  FJsonBuilder.AddMiddleware(AEventMiddleware);
+end;
+
+class procedure TJsonFlow.ClearMiddlewares;
+begin
+  TJsonBuilder.ClearMiddlewares;
 end;
 
 end.

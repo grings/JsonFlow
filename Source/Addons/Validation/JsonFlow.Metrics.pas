@@ -72,6 +72,13 @@ type
     
     procedure _CleanupOldRecords;
     function _CalculatePercentile(const AValues: TArray<Int64>; APercentile: Double): Int64;
+    function GetTotalValidations: Int64;
+    function GetSuccessfulValidations: Int64;
+    function GetFailedValidations: Int64;
+    function GetCacheHits: Int64;
+    function GetCacheMisses: Int64;
+    function GetMinExecutionTime: Double;
+    function GetMaxExecutionTime: Double;
   public
     constructor Create;
     destructor Destroy; override;
@@ -154,21 +161,13 @@ type
     property CacheHits: Int64 read GetCacheHits;
     property CacheMisses: Int64 read GetCacheMisses;
     property MaxHistorySize: Integer read FMaxHistorySize write FMaxHistorySize;
-    
+
     // Propriedades de tempo (para compatibilidade com Stratum e Reports)
     property AverageValidationTime: Double read GetAverageExecutionTime;
     property MinValidationTime: Double read GetMinExecutionTime;
     property MaxValidationTime: Double read GetMaxExecutionTime;
     property SuccessRate: Double read GetSuccessRate;
     property Throughput: Double read GetValidationsPerSecond;
-  private
-    function GetTotalValidations: Int64;
-    function GetSuccessfulValidations: Int64;
-    function GetFailedValidations: Int64;
-    function GetCacheHits: Int64;
-    function GetCacheMisses: Int64;
-    function GetMinExecutionTime: Double;
-    function GetMaxExecutionTime: Double;
   end;
 
   /// <summary>

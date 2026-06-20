@@ -10,6 +10,7 @@ uses
   System.DateUtils,
   Variants,
   JsonFlow,
+  JsonFlow.Reader,
   JsonFlow.Utils,
   JsonFlow.Interfaces,
   JsonFlow.Navigator,
@@ -35,12 +36,12 @@ type
 
   TTestSimpleClass = class
   private
-    FName: String;
+    FName: string;
     FAge: Integer;
     FIsActive: Boolean;
     FScore: Double;
   public
-    property Name: String read FName write FName;
+    property Name: string read FName write FName;
     property Age: Integer read FAge write FAge;
     property IsActive: Boolean read FIsActive write FIsActive;
     property Score: Double read FScore write FScore;
@@ -144,7 +145,7 @@ begin
       begin
         LJsonFlow.Parse('{nome:"Jo�o"}'); // Chave sem aspas
       end,
-      EInvalidOperation,
+      EJsonFlowParseError,
       'Deve lan�ar exce��o para JSON inv�lido'
     );
   finally
@@ -163,7 +164,7 @@ begin
       begin
         LJsonFlow.Parse(''); // String vazia
       end,
-      EInvalidOperation,
+      EJsonFlowParseError,
       'Deve lan�ar exce��o para JSON vazio'
     );
   finally

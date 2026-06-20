@@ -152,10 +152,10 @@ type
     procedure Clear;
     function TryGet(const APath: String; out AElement: IJSONElement): Boolean;
     procedure Add(const APath: String; const AElement: IJSONElement);
+    function FGetCount: Integer;
     property Hits: Int64 read FHits;
     property Misses: Int64 read FMisses;
-    property Count: Integer readFGetCount;
-    function FGetCount: Integer;
+    property Count: Integer read FGetCount;
   end;
 
   /// <summary>
