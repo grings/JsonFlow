@@ -67,7 +67,7 @@ uses
 var
   LSerializer: TJSONSerializer;
   LJson: string;
-  LUser: TUser;
+  LUser, LUserCopy: TUser;
 begin
   LSerializer := TJSONSerializer.Create;
   try
@@ -203,7 +203,7 @@ uses
 var
   LSerializer: TJSONSerializer;
   LJson: string;
-  LUser: TUser;
+  LUser, LUserCopy: TUser;
 begin
   LSerializer := TJSONSerializer.Create;
   try
