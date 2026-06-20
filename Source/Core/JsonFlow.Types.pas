@@ -30,18 +30,6 @@ type
 //  TDynamicArrayValue = array[0..MaxInt div SizeOf(Variant) - 1] of Variant;
   TDynamicArrayValue = array of Variant;
 
-  IEventMiddleware = interface
-    ['{5B68F8AF-40FD-4056-A75E-D93A55A5BD6D}']
-    procedure SetValue(const AInstance: TObject;
-                       const AProperty: TRttiProperty;
-                       var AResult: Variant;
-                       var ABreak: Boolean);
-    procedure GetValue(const AInstance: TObject;
-                       const AProperty: TRttiProperty;
-                       const AValue: Variant;
-                       var ABreak: Boolean);
-  end;
-
   {$SCOPEDENUMS ON}
   TJsonTypeKind = (jtkUndefined, jtkObject, jtkArray);
   TJsonValueKind = (jvkNone, jvkNull, jvkString, jvkInteger, jvkFloat,

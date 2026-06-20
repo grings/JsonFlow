@@ -34,7 +34,8 @@ uses
   Variants,
   Generics.Collections,
   JsonFlow.Utils,
-  JsonFlow.Types;
+  JsonFlow.Types,
+  JsonFlow.Interfaces;
 
 type
   TJsonBuilder = class;
@@ -291,10 +292,11 @@ var
   LTypeInfo: PTypeInfo;
   LBreak: Boolean;
   LMiddleware: IEventMiddleware;
+  LGetMw: IGetValueMiddleware;
 
   function L_IsBoolean: Boolean;
   var
-    LTypeName: String;
+    LTypeName: string;
   begin
     LTypeName := AProperty.PropertyType.Handle.NameFld.ToString;
     Result := SameText(LTypeName, 'Boolean') or SameText(LTypeName, 'bool');
@@ -315,7 +317,8 @@ begin
   LBreak := False;
   for LMiddleware in FMiddlwareList do
   begin
-    LMiddleware.GetValue(AInstance, AProperty, Result, LBreak);
+    if Supports(LMiddleware, IGetValueMiddleware, LGetMw) then
+      LGetMw.GetValue(AInstance, AProperty, Result, LBreak);
     if LBreak then
       Exit;
   end;
@@ -423,11 +426,12 @@ var
   LTypeInfo: PTypeInfo;
   LObject: TObject;
   LMiddleware: IEventMiddleware;
+  LSetMw: ISetValueMiddleware;
   LValue: Variant;
 
   function L_IsBoolean: Boolean;
   var
-    LTypeName: String;
+    LTypeName: string;
   begin
     LTypeName := AProperty.PropertyType.Handle.NameFld.ToString;
     Result := SameText(LTypeName, 'Boolean') or SameText(LTypeName, 'bool');
@@ -451,7 +455,8 @@ begin
   for LMiddleware in FMiddlwareList do
   begin
     LBreak := False;
-    LMiddleware.SetValue(AInstance, AProperty, LValue, LBreak);
+    if Supports(LMiddleware, ISetValueMiddleware, LSetMw) then
+      LSetMw.SetValue(AInstance, AProperty, LValue, LBreak);
     if LBreak then
       Exit;
   end;

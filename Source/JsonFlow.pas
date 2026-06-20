@@ -30,6 +30,7 @@ uses
   Generics.Collections,
   JsonFlow.Utils,
   JsonFlow.Types,
+  JsonFlow.Interfaces,
   JsonFlow.Writer,
   JsonFlow.Reader,
   JsonFlow.Builders;
