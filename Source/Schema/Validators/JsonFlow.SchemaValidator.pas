@@ -507,9 +507,14 @@ end;
 
 destructor TSchemaCompiler.Destroy;
 begin
+  // ClearCache touches FRefStack/FNavigator/FCompiledSchemas/FBaseURIStack
+  // (FRefStack.Clear); it MUST run before those fields are freed. The previous
+  // order freed FRefStack and then ClearCache called FRefStack.Clear on the
+  // freed object -> use-after-free / heap corruption (caught via FastMM4
+  // FullDebugMode while consuming JsonFlow from FiscalBridge SpedFw).
+  ClearCache; // limpar cache enquanto os campos ainda estão vivos
   FreeAndNil(FNavigator);
   FRefStack.Free;
-  ClearCache; // Limpar cache antes de liberar o dicionário
   FCompiledSchemas.Free;
   // Fase 2: Limpar recursos Base URI e HTTP
   FBaseURIStack.Free;
