@@ -680,6 +680,16 @@ begin
       LFormat := (ASchemaObj.GetValue('format') as IJSONValue).AsString;
       ARules.Add(TFormatRule.Create(LFormat));
     end;
+
+    if ASchemaObj.ContainsKey('contentEncoding') then
+    begin
+      ARules.Add(TContentEncodingRule.Create((ASchemaObj.GetValue('contentEncoding') as IJSONValue).AsString));
+    end;
+
+    if ASchemaObj.ContainsKey('contentMediaType') then
+    begin
+      ARules.Add(TContentMediaTypeRule.Create((ASchemaObj.GetValue('contentMediaType') as IJSONValue).AsString));
+    end;
   end;
 end;
 
