@@ -13,7 +13,7 @@ uses
   System.Generics.Collections, System.Math, System.UITypes,
   System.IOUtils, System.JSON,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  Vcl.ExtCtrls,
+  Vcl.ExtCtrls, Vcl.Imaging.pngimage,
   VCLTee.Chart, VCLTee.Series, VCLTee.TeEngine,
   REST.Json,
   JsonFlow.Serializer, JsonFlow.Reader, JsonFlow.Interfaces,
@@ -39,10 +39,7 @@ type
     btnStart     : TButton;
     lblStatus    : TLabel;
     pnlBottom    : TPanel;
-    pnlLogo      : TPanel;
-    lblJson      : TLabel;
-    lblFlow      : TLabel;
-    lblSub       : TLabel;
+    imgLogo      : TImage;
     memResults   : TMemo;
     pnlCharts    : TPanel;
     pnlChartLeft : TPanel;
@@ -75,11 +72,21 @@ implementation
 { TfrmBenchmark }
 
 procedure TfrmBenchmark.FormCreate(Sender: TObject);
+var
+  LLogoPath: string;
 begin
   // Procura a pasta Data diretamente no mesmo diretorio do executavel
   FDataPath := TPath.Combine(
     TPath.GetDirectoryName(Application.ExeName),
     DATA_PATH);
+
+  // Carrega a logo a partir da pasta assets
+  LLogoPath := TPath.Combine(
+    TPath.GetDirectoryName(Application.ExeName),
+    'assets\jsonflow_logo.png');
+
+  if TFile.Exists(LLogoPath) then
+    imgLogo.Picture.LoadFromFile(LLogoPath);
 
   rdSimple.Checked := True;
   SetupCharts;

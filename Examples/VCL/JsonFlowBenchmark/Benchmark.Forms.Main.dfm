@@ -88,56 +88,15 @@ object frmBenchmark: TfrmBenchmark
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
-    object pnlLogo: TPanel
+    object imgLogo: TImage
       Left = 0
       Top = 0
       Width = 195
       Height = 150
       Align = alLeft
-      BevelOuter = bvNone
-      Color = $00201510
-      ParentBackground = False
-      ParentColor = False
-      TabOrder = 0
-      object lblJson: TLabel
-        Left = 14
-        Top = 22
-        Width = 170
-        Height = 50
-        Caption = 'json'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWhite
-        Font.Height = -37
-        Font.Name = 'Segoe UI'
-        Font.Style = [fsBold]
-        ParentFont = False
-      end
-      object lblFlow: TLabel
-        Left = 14
-        Top = 76
-        Width = 170
-        Height = 42
-        Caption = 'Flow'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = $0066FF44
-        Font.Height = -31
-        Font.Name = 'Segoe UI'
-        Font.Style = [fsBold]
-        ParentFont = False
-      end
-      object lblSub: TLabel
-        Left = 12
-        Top = 130
-        Width = 175
-        Height = 14
-        Caption = 'serialization library'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clSilver
-        Font.Height = -11
-        Font.Name = 'Segoe UI'
-        Font.Style = []
-        ParentFont = False
-      end
+      Center = True
+      Proportional = True
+      Stretch = True
     end
     object memResults: TMemo
       Left = 195
