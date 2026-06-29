@@ -336,7 +336,7 @@ Contribuições são bem-vindas — relatórios de bugs, melhorias de documenta�
 If JsonFlow saves you time, consider supporting its development.
 Se o JsonFlow economiza seu tempo, considere apoiar o desenvolvimento.
 
-[![Doação](https://img.shields.io/badge/PagSeguro-contribua-green)](https://pag.ae/bglQrWD)
+[![Doação](https://img.shields.io/badge/Mercado%20Pago-contribua-blue)](https://link.mercadopago.com.br/isaquepinheiro)
 
 ---
 
