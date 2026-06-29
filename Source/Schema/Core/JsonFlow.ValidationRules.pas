@@ -54,7 +54,8 @@ uses
   JsonFlow.ValidationRules.PropertyNames,
   JsonFlow.ValidationRules.Conditional,
   JsonFlow.ValidationRules.Ref,
-  JsonFlow.ValidationRules.Dependencies;
+  JsonFlow.ValidationRules.Dependencies,
+  JsonFlow.ValidationRules.Content;
 
 type
   TBaseValidationRule = JsonFlow.ValidationRules.Base.TBaseValidationRule;
@@ -89,6 +90,8 @@ type
   TPropertyNamesRule = JsonFlow.ValidationRules.PropertyNames.TPropertyNamesRule;
   TConditionalRule = JsonFlow.ValidationRules.Conditional.TConditionalRule;
   TRefRule = JsonFlow.ValidationRules.Ref.TRefRule;
+  TContentEncodingRule = JsonFlow.ValidationRules.Content.TContentEncodingRule;
+  TContentMediaTypeRule = JsonFlow.ValidationRules.Content.TContentMediaTypeRule;
 
   // Factory para cria��o de regras
   TValidationRuleFactory = class
@@ -123,6 +126,8 @@ type
     class function CreatePatternPropertiesRule(const APatternSchemas: TDictionary<string, IJSONElement>): IValidationRule;
     class function CreatePropertyNamesRule(const ASchema: IJSONElement): IValidationRule;
     class function CreateConditionalRule(const AIfSchema: IJSONElement; const AThenSchema: IJSONElement = nil; const AElseSchema: IJSONElement = nil): IValidationRule;
+    class function CreateContentEncodingRule(const AEncoding: string): IValidationRule;
+    class function CreateContentMediaTypeRule(const AMediaType: string): IValidationRule;
   end;
 
 implementation
@@ -277,6 +282,16 @@ end;
 class function TValidationRuleFactory.CreateConditionalRule(const AIfSchema: IJSONElement; const AThenSchema: IJSONElement; const AElseSchema: IJSONElement): IValidationRule;
 begin
   Result := TConditionalRule.Create(AIfSchema, AThenSchema, AElseSchema);
+end;
+
+class function TValidationRuleFactory.CreateContentEncodingRule(const AEncoding: string): IValidationRule;
+begin
+  Result := TContentEncodingRule.Create(AEncoding);
+end;
+
+class function TValidationRuleFactory.CreateContentMediaTypeRule(const AMediaType: string): IValidationRule;
+begin
+  Result := TContentMediaTypeRule.Create(AMediaType);
 end;
 
 end.

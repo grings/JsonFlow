@@ -90,6 +90,10 @@ type
     procedure TestValidate_SchemaPathDiagnostics;
     [Test]
     procedure TestValidate_OfficialSuiteDraft07;
+    [Test]
+    procedure TestValidate_ContentEncoding;
+    [Test]
+    procedure TestValidate_ContentMediaType;
   end;
 
 implementation
@@ -581,6 +585,56 @@ var
 begin
   LFixturePath := TPath.Combine(TPath.Combine(TPath.Combine(ExtractFilePath(ParamStr(0)), 'Fixtures'), 'Draft7'), 'dependencies.json');
   TJSONSchemaTestSuiteRunner.RunSuite(LFixturePath);
+end;
+
+procedure TJSONSchemaValidatorTests.TestValidate_ContentEncoding;
+var
+  LSchema, LJson: string;
+begin
+  // Base64
+  LSchema := '{"type": "string", "contentEncoding": "base64"}';
+  FReader.LoadFromString(LSchema);
+  
+  LJson := '"SGVsbG8gV29ybGQ="'; // "Hello World"
+  Assert.IsTrue(FReader.Validate(LJson), 'Valid base64 string');
+  
+  LJson := '"invalid_base64_chars!@"';
+  Assert.IsFalse(FReader.Validate(LJson), 'Invalid base64 string');
+
+  // Hex
+  LSchema := '{"type": "string", "contentEncoding": "hex"}';
+  FReader.LoadFromString(LSchema);
+  
+  LJson := '"48656c6c6f"'; // "Hello" em hex
+  Assert.IsTrue(FReader.Validate(LJson), 'Valid hex string');
+  
+  LJson := '"not_hex"';
+  Assert.IsFalse(FReader.Validate(LJson), 'Invalid hex string');
+end;
+
+procedure TJSONSchemaValidatorTests.TestValidate_ContentMediaType;
+var
+  LSchema, LJson: string;
+begin
+  // application/json pura
+  LSchema := '{"type": "string", "contentMediaType": "application/json"}';
+  FReader.LoadFromString(LSchema);
+  
+  LJson := '"{\"name\": \"Alice\"}"'; // JSON stringificado
+  Assert.IsTrue(FReader.Validate(LJson), 'Valid embedded JSON string');
+  
+  LJson := '"not a json string"';
+  Assert.IsFalse(FReader.Validate(LJson), 'Invalid embedded JSON string');
+
+  // application/json codificado em base64
+  LSchema := '{"type": "string", "contentEncoding": "base64", "contentMediaType": "application/json"}';
+  FReader.LoadFromString(LSchema);
+  
+  LJson := '"eyJuYW1lIjogIkFsaWNlIn0="'; // '{"name": "Alice"}' em base64
+  Assert.IsTrue(FReader.Validate(LJson), 'Valid base64 JSON string');
+  
+  LJson := '"SGVsbG8="'; // 'Hello' em base64 (não é JSON)
+  Assert.IsFalse(FReader.Validate(LJson), 'Invalid base64 JSON string (not JSON structure)');
 end;
 
 initialization
