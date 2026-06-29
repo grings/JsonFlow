@@ -49,11 +49,7 @@ Below is a comparison demonstrating JsonFlow's performance superiority against s
   <img src="assets/benchmarks.png" alt="JsonFlow Performance Comparison Chart" width="800"/>
 </p>
 
-Additionally, here is a visual demo of our VCL benchmark suite executing intensive JSON operations:
 
-<p align="center">
-  <img src="assets/jsonflow.png" alt="VCL Benchmark Demo Interface" width="800"/>
-</p>
 
 ### 🐧 Cross-Platform Build — Win32 / Win64 / Linux64
 
