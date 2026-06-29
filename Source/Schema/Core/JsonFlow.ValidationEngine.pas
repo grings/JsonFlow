@@ -36,10 +36,10 @@ type
     function Validate(const AValue: IJSONElement; const AContext: TObject): TValidationResult;
   end;
 
-  // Interface para resolver refer?ncias $ref
   ISchemaCompiler = interface
     ['{C32A604E-3A2B-40BD-A88E-5D61E9361C50}']
-    function ResolveReference(const ARefPath: string): IJSONElement;
+    function ResolveReference(const ARefPath: string): IJSONElement; overload;
+    function ResolveReference(const ARefPath: string; const ACurrentSchema: IJSONElement): IJSONElement; overload;
   end;
 
   ISubschemaEvaluator = interface
