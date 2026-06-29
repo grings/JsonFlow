@@ -1155,10 +1155,54 @@ begin
 end;
 
 function TSchemaCompiler.OptimizeRules(const ARules: TArray<IValidationRule>): TArray<IValidationRule>;
+var
+  LOrderedRules: TArray<IValidationRule>;
+  LComparer: IComparer<IValidationRule>;
 begin
-  // Implementa??o b?sica - apenas retorna as regras sem otimiza??o
-  // Futuras otimiza??es: remo??o de regras redundantes, reordena??o por performance, etc.
-  Result := ARules;
+  if Length(ARules) <= 1 then
+  begin
+    Result := ARules;
+    Exit;
+  end;
+
+  SetLength(LOrderedRules, Length(ARules));
+  TArray.Copy<IValidationRule>(ARules, LOrderedRules, Length(ARules));
+
+  LComparer := TDelegatedComparer<IValidationRule>.Create(
+    function(const Left, Right: IValidationRule): Integer
+    var
+      LLeftType, LRightType: TRuleType;
+      LLeftWeight, LRightWeight: Integer;
+    begin
+      LLeftType := Left.GetRuleType;
+      LRightType := Right.GetRuleType;
+
+      case LLeftType of
+        rtPrimitive: LLeftWeight := 1;
+        rtStructural: LLeftWeight := 2;
+        rtComposite: LLeftWeight := 3;
+      else
+        LLeftWeight := 4;
+      end;
+
+      case LRightType of
+        rtPrimitive: LRightWeight := 1;
+        rtStructural: LRightWeight := 2;
+        rtComposite: LRightWeight := 3;
+      else
+        LRightWeight := 4;
+      end;
+
+      Result := LLeftWeight - LRightWeight;
+    end
+  );
+  try
+    TArray.Sort<IValidationRule>(LOrderedRules, LComparer);
+  finally
+    LComparer := nil;
+  end;
+
+  Result := LOrderedRules;
 end;
 
 function TSchemaCompiler.GetCacheKey(const ASchema: IJSONElement): string;
