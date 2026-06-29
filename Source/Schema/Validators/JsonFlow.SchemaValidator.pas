@@ -179,7 +179,8 @@ type
     FCompiler: TSchemaCompiler;
   public
     constructor Create(ACompiler: TSchemaCompiler);
-    function ResolveReference(const ARefPath: string): IJSONElement;
+    function ResolveReference(const ARefPath: string): IJSONElement; overload;
+    function ResolveReference(const ARefPath: string; const ACurrentSchema: IJSONElement): IJSONElement; overload;
   end;
 
   TSubschemaEvaluator = class(TInterfacedObject, ISubschemaEvaluator)
@@ -272,7 +273,7 @@ begin
     Exit;
 
   if Assigned(AContext.Resolver) then
-    Result := AContext.Resolver.ResolveReference(LRefValue.AsString);
+    Result := AContext.Resolver.ResolveReference(LRefValue.AsString, ASchema);
 end;
 
 function TSubschemaEvaluator.Evaluate(const AValue: IJSONElement; const ASubschema: IJSONElement; const AContext: TValidationContext): TValidationResult;
@@ -330,6 +331,13 @@ begin
   if not Assigned(FCompiler) then
     Exit(nil);
   Result := FCompiler.ResolveReference(ARefPath);
+end;
+
+function TSchemaCompilerAdapter.ResolveReference(const ARefPath: string; const ACurrentSchema: IJSONElement): IJSONElement;
+begin
+  if not Assigned(FCompiler) then
+    Exit(nil);
+  Result := FCompiler.ResolveReference(ARefPath, ACurrentSchema);
 end;
 
 { TValidationVisitor }
@@ -1135,9 +1143,19 @@ begin
 end;
 
 function TSchemaCompiler.GetCacheKey(const ASchema: IJSONElement): string;
+var
+  LSchemaObj: IJSONObject;
+  LIdValue: IJSONValue;
+  LContextKey: string;
 begin
-  // Gerar hash do schema JSON para usar como chave de cache
-  Result := IntToStr(THashBobJenkins.GetHashValue(_GetCurrentBaseURI + '|' + ASchema.AsJSON));
+  LContextKey := _GetCurrentBaseURI;
+  if Supports(ASchema, IJSONObject, LSchemaObj) then
+  begin
+    if LSchemaObj.ContainsKey('$id') and Supports(LSchemaObj.GetValue('$id'), IJSONValue, LIdValue) then
+      LContextKey := LContextKey + '|' + LIdValue.AsString;
+  end;
+  // Gerar hash do schema JSON para usar como chave de cache context-aware
+  Result := IntToStr(THashBobJenkins.GetHashValue(LContextKey + '|' + ASchema.AsJSON));
 end;
 
 procedure TSchemaCompiler.ClearCache;
