@@ -191,20 +191,6 @@ end;
 | **Delphi XE ou superior** | VCL, FMX, Console (Win/Linux/macOS/iOS/Android) | ✅ Sim | ✅ Sim |
 | **Lazarus / FreePascal** | LCL, Console (Multiplataforma) | ✅ Sim | ✅ Sim |
 
-### 📊 Performance & Benchmarks
-
-Abaixo está o gráfico comparativo demonstrando a superioridade de performance do JsonFlow frente ao JSON nativo do Delphi:
-
-<p align="center">
-  <img src="assets/benchmarks.png" alt="Gráfico Comparativo de Performance do JsonFlow" width="800"/>
-</p>
-
-Adicionalmente, aqui está a captura da nossa aplicação de benchmark VCL:
-
-<p align="center">
-  <img src="assets/jsonflow.png" alt="Interface VCL do Benchmark do JsonFlow" width="800"/>
-</p>
-
 ### 🐧 Build Multiplataforma — Win32 / Win64 / Linux64
 
 > **Win32 / Win64:** ✅ verificado (2026-06-20, backend real em produção). **Linux64:** as units usadas pelo backend compilam e rodam no Linux; um **build standalone do framework completo** esbarra hoje num **item interno (não-plataforma)** — `IEventMiddleware` está declarado em **ambas** `JsonFlow.Types` e `JsonFlow.Interfaces`, então puxar as duas é ambíguo. Escolher a declaração canônica é um follow-up — **não** é problema de plataforma.
