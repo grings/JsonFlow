@@ -912,6 +912,20 @@ begin
                       .Append(':')
                       .Append(VarToStr(_GetInstanceProp(AObject, LProperty)))
                       .Append(',')
+      else if (LProperty.PropertyType.TypeKind = tkClass) and
+              (Length(FGetMiddlewares) = 0) and
+              not Assigned(FNotifyEventGetValue) then
+        // Caminho direto para objeto aninhado: o fluxo via _GetInstanceProp
+        // SERIALIZAVA o filho, REPARSEAVA para árvore de Variants e
+        // RE-SERIALIZAVA (custo O(profundidade) com parse no meio). Só é
+        // seguro sem middlewares/eventos — com eles, mantém o caminho antigo
+        // para preservar a interceptação.
+        // AStoreClassName NÃO é propagado — fidelidade ao caminho antigo,
+        // que serializava o filho sem ClassName.
+        LResultBuilder.Append(StringToJson(LProperty.Name))
+                      .Append(':')
+                      .Append(ObjectToJson(LProperty.GetValue(AObject).AsObject))
+                      .Append(',')
       else
         LResultBuilder.Append(StringToJson(LProperty.Name))
                       .Append(':')
@@ -1548,6 +1562,9 @@ var
   FContext: TRttiContext;
   LItem: TCollectionItem;
   LListType: TRttiType;
+  LListRtti: TRttiType;
+  LAddMethod: TRttiMethod;
+  LCreateMethod: TRttiMethod;
   LProperty: TRttiProperty;
   LObjectType: TObject;
 
@@ -1610,17 +1627,30 @@ begin
         else
         if Pos('List<', AObject.ClassName) > 0 then
         begin
-          LListType := FContext.GetType(AObject.ClassType);
-          LListType := _GetListType(LListType);
+          LListRtti := FContext.GetType(AObject.ClassType);
+          LListType := _GetListType(LListRtti);
           if LListType.IsInstance then
           begin
+            // Métodos resolvidos UMA vez — antes era GetType+GetMethod('Add')
+            // POR ITEM, mais alocação via MetaclassType.Create seguida de um
+            // segundo Invoke('Create') sobre a instância.
+            LAddMethod := LListRtti.GetMethod('Add');
+            if LAddMethod = nil then
+              raise Exception.Create('Cannot find method "Add" in the object');
+            LCreateMethod := LListType.GetMethod('Create');
+            if LCreateMethod = nil then
+              raise Exception.Create('Cannot find method "Create" in the object');
             for LFor := 0 to FJsonPair.Count - 1 do
             begin
-              LObjectType := LListType.AsInstance.MetaclassType.Create;
-              L_MethodCall(LObjectType, 'Create', []);
+              // Invoke do construtor na CLASSE: aloca e roda o construtor real
+              // numa única chamada.
+              LObjectType := LCreateMethod.Invoke(LListType.AsInstance.MetaclassType, []).AsObject;
               if not TJsonBuilder._JsonVariantData(FJsonPair.Values[LFor]).ToObject(LObjectType) then
+              begin
+                LObjectType.Free; // não vazar o item corrente na falha
                 Exit;
-              L_MethodCall(AObject, 'Add', [LObjectType]);
+              end;
+              LAddMethod.Invoke(AObject, [LObjectType]);
             end;
           end;
         end
