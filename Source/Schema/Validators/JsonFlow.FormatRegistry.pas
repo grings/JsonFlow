@@ -64,6 +64,9 @@ type
   private
     class var FInstance: TFormatRegistry;
     class var FValidators: TDictionary<string, IFormatValidator>;
+    // Protege o dicionário: registro/consulta concorrentes (validações em
+    // threads distintas) corrompiam o TDictionary sem sincronização.
+    class var FLock: TObject;
     class constructor Create;
     class destructor Destroy;
     constructor Create;
@@ -174,13 +177,18 @@ end;
 
 class constructor TFormatRegistry.Create;
 begin
+  FLock := TObject.Create;
   FValidators := TDictionary<string, IFormatValidator>.Create;
+  // Instância criada aqui (eager) para eliminar o lazy-init com race no Instance
+  FInstance := TFormatRegistry.Create;
   RegisterBuiltInFormatValidators;
 end;
 
 class destructor TFormatRegistry.Destroy;
 begin
+  FInstance.Free;
   FValidators.Free;
+  FLock.Free;
 end;
 
 constructor TFormatRegistry.Create;
@@ -190,52 +198,68 @@ end;
 
 class function TFormatRegistry.Instance: TFormatRegistry;
 begin
-  if not Assigned(FInstance) then
-    FInstance := TFormatRegistry.Create;
   Result := FInstance;
 end;
 
 class procedure TFormatRegistry.RegisterValidator(const AFormatName: string; const AValidator: IFormatValidator);
-var
-  LFormatLower: string;
 begin
-  LFormatLower := AnsiLowerCase(AFormatName);
-  FValidators.AddOrSetValue(LFormatLower, AValidator);
+  TMonitor.Enter(FLock);
+  try
+    FValidators.AddOrSetValue(AnsiLowerCase(AFormatName), AValidator);
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class procedure TFormatRegistry.UnregisterValidator(const AFormatName: string);
-var
-  LFormatLower: string;
 begin
-  LFormatLower := AnsiLowerCase(AFormatName);
-  FValidators.Remove(LFormatLower);
+  TMonitor.Enter(FLock);
+  try
+    FValidators.Remove(AnsiLowerCase(AFormatName));
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TFormatRegistry.GetValidator(const AFormatName: string): IFormatValidator;
-var
-  LFormatLower: string;
 begin
-  LFormatLower := AnsiLowerCase(AFormatName);
-  if not FValidators.TryGetValue(LFormatLower, Result) then
-    Result := nil;
+  TMonitor.Enter(FLock);
+  try
+    if not FValidators.TryGetValue(AnsiLowerCase(AFormatName), Result) then
+      Result := nil;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TFormatRegistry.IsFormatRegistered(const AFormatName: string): Boolean;
-var
-  LFormatLower: string;
 begin
-  LFormatLower := AnsiLowerCase(AFormatName);
-  Result := FValidators.ContainsKey(LFormatLower);
+  TMonitor.Enter(FLock);
+  try
+    Result := FValidators.ContainsKey(AnsiLowerCase(AFormatName));
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class function TFormatRegistry.GetRegisteredFormats: TArray<string>;
 begin
-  Result := FValidators.Keys.ToArray;
+  TMonitor.Enter(FLock);
+  try
+    Result := FValidators.Keys.ToArray;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 class procedure TFormatRegistry.ClearRegistry;
 begin
-  FValidators.Clear;
+  TMonitor.Enter(FLock);
+  try
+    FValidators.Clear;
+  finally
+    TMonitor.Exit(FLock);
+  end;
 end;
 
 { TEmailFormatValidator }

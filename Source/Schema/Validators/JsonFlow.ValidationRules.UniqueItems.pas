@@ -64,10 +64,12 @@ begin
     else
       Result := 'unknown';
   end
+  // Serialização compacta real: os placeholders '[array]'/'{object}' faziam
+  // QUALQUER par de arrays/objetos distintos contar como duplicado.
   else if Supports(AElement, IJSONArray, LArray) then
-    Result := '[array]' // Simplificação - seria necessário serializar o array completo
+    Result := LArray.AsJSON(False)
   else if Supports(AElement, IJSONObject, LObject) then
-    Result := '{object}' // Simplificação - seria necessário serializar o objeto completo
+    Result := LObject.AsJSON(False)
   else
     Result := 'unknown';
 end;
