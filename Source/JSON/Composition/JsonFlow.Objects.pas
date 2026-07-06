@@ -26,7 +26,7 @@ uses
   JsonFlow.Pair;
 
 type
-  TJSONObject = class(TInterfacedObject, IJSONElement, IJSONObject)
+  TJSONObject = class(TInterfacedObject, IJSONElement, IJSONObject, IJSONCompactWriter)
   private const
     // Abaixo disso a varredura linear é mais barata que manter o dicionário
     // (objetos JSON típicos têm poucas chaves e não pagam alocação extra).
@@ -50,6 +50,7 @@ type
     function Filter(const APredicate: TFunc<String, IJSONElement, Boolean>): IJSONObject;
     function Map(const ATransform: TFunc<String, IJSONElement, IJSONPair>): IJSONObject;
     function Pairs: TArray<IJSONPair>;
+    procedure AppendCompactJSON(ABuilder: TStringBuilder);
     function AsJSON(const AIdent: Boolean = False): String;
     procedure SaveToStream(AStream: TStream; const AIdent: Boolean = False);
     function Clone: IJSONElement;
@@ -270,12 +271,51 @@ begin
   Result := FPairs.ToArray;
 end;
 
+procedure TJSONObject.AppendCompactJSON(ABuilder: TStringBuilder);
+var
+  LFor: Integer;
+  LValue: IJSONElement;
+  LCompact: IJSONCompactWriter;
+begin
+  ABuilder.Append('{');
+  for LFor := 0 to FPairs.Count - 1 do
+  begin
+    if LFor > 0 then
+      ABuilder.Append(',');
+    ABuilder.Append('"');
+    ABuilder.Append(StringReplace(FPairs[LFor].Key, '"', '\"', [rfReplaceAll]));
+    ABuilder.Append('":');
+    LValue := FPairs[LFor].Value;
+    if not Assigned(LValue) then
+      ABuilder.Append(JSON_NULL)
+    else if Supports(LValue, IJSONCompactWriter, LCompact) then
+      LCompact.AppendCompactJSON(ABuilder)
+    else
+      ABuilder.Append(LValue.AsJSON(False));
+  end;
+  ABuilder.Append('}');
+end;
+
 function TJSONObject.AsJSON(const AIdent: Boolean): String;
 var
   LBuilder: TStringBuilder;
   LFor: Integer;
   LIndent: String;
 begin
+  // Compacto: recursão num único builder — antes cada nível materializava a
+  // subárvore inteira como String (Pair.AsJSON -> Value.AsJSON -> ...).
+  if not AIdent then
+  begin
+    LBuilder := TStringBuilder.Create(1024);
+    try
+      AppendCompactJSON(LBuilder);
+      Result := LBuilder.ToString;
+    finally
+      LBuilder.Free;
+    end;
+    Exit;
+  end;
+
   LBuilder := TStringBuilder.Create;
   try
     if AIdent then

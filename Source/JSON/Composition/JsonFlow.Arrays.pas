@@ -24,7 +24,7 @@ uses
   JsonFlow.Interfaces;
 
 type
-  TJSONArray = class(TInterfacedObject, IJSONElement, IJSONArray)
+  TJSONArray = class(TInterfacedObject, IJSONElement, IJSONArray, IJSONCompactWriter)
   private
     FItems: TList<IJSONElement>;
     function _GetElement(AIndex: Integer; ARaiseOnError: Boolean): IJSONElement;
@@ -40,6 +40,7 @@ type
     function Filter(const APredicate: TFunc<IJSONElement, Boolean>): IJSONArray;
     function Map(const ATransform: TFunc<IJSONElement, IJSONElement>): IJSONArray;
     function Items: TArray<IJSONElement>;
+    procedure AppendCompactJSON(ABuilder: TStringBuilder);
     function AsJSON(const AIdent: Boolean = False): String;
     procedure SaveToStream(AStream: TStream; const AIdent: Boolean = False);
     function Clone: IJSONElement;
@@ -136,12 +137,48 @@ begin
   Result := FItems.ToArray;
 end;
 
+procedure TJSONArray.AppendCompactJSON(ABuilder: TStringBuilder);
+var
+  LFor: Integer;
+  LItem: IJSONElement;
+  LCompact: IJSONCompactWriter;
+begin
+  ABuilder.Append('[');
+  for LFor := 0 to FItems.Count - 1 do
+  begin
+    if LFor > 0 then
+      ABuilder.Append(',');
+    LItem := FItems[LFor];
+    if not Assigned(LItem) then
+      ABuilder.Append(JSON_NULL)
+    else if Supports(LItem, IJSONCompactWriter, LCompact) then
+      LCompact.AppendCompactJSON(ABuilder)
+    else
+      ABuilder.Append(LItem.AsJSON(False));
+  end;
+  ABuilder.Append(']');
+end;
+
 function TJSONArray.AsJSON(const AIdent: Boolean): String;
 var
   LBuilder: TStringBuilder;
   LFor: Integer;
   LIndent: String;
 begin
+  // Compacto: recursão num único builder — antes cada item materializava a
+  // subárvore inteira como String.
+  if not AIdent then
+  begin
+    LBuilder := TStringBuilder.Create(1024);
+    try
+      AppendCompactJSON(LBuilder);
+      Result := LBuilder.ToString;
+    finally
+      LBuilder.Free;
+    end;
+    Exit;
+  end;
+
   LBuilder := TStringBuilder.Create;
   try
     if AIdent then

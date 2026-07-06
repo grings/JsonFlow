@@ -142,6 +142,16 @@ type
     function Value(AIndex: Integer): IJSONElement;
   end;
 
+  /// <summary>
+  /// Caminho interno de escrita compacta: objetos/arrays recursam no mesmo
+  /// TStringBuilder em vez de materializar cada subárvore como String
+  /// intermediária (custo O(tamanho × profundidade) no AsJSON/Writer).
+  /// </summary>
+  IJSONCompactWriter = interface
+    ['{7D6E9F2A-3B1C-4D5E-8A9B-0C1D2E3F4A5B}']
+    procedure AppendCompactJSON(ABuilder: TStringBuilder);
+  end;
+
   IJSONWriter = interface
     ['{89F0EE05-38B8-44EA-BA7D-81623545D5E4}']
     function Write(const AElement: IJSONElement; const AIdent: Boolean = False): String;
