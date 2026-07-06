@@ -80,10 +80,19 @@ var
   LPairs: TArray<IJSONPair>;
   LArr: IJSONArray;
   LItems: TArray<IJSONElement>;
+  LCompact: IJSONCompactWriter;
 begin
   if not Assigned(AElement) then
   begin
     ABuilder.Append(JSON_NULL);
+    Exit;
+  end;
+
+  // Compacto: recursão num único builder — antes cada par materializava a
+  // subárvore inteira como String (Pair.AsJSON -> Value.AsJSON -> ...).
+  if (not AIdent) and Supports(AElement, IJSONCompactWriter, LCompact) then
+  begin
+    LCompact.AppendCompactJSON(ABuilder);
     Exit;
   end;
 
@@ -149,7 +158,7 @@ function TJSONWriter.Write(const AElement: IJSONElement; const AIdent: Boolean):
 var
   LBuilder: TStringBuilder;
 begin
-  LBuilder := TStringBuilder.Create;
+  LBuilder := TStringBuilder.Create(4096);
   try
     _WriteElement(AElement, LBuilder, AIdent, 0);
     Result := LBuilder.ToString;
