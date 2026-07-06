@@ -183,7 +183,11 @@ begin
           'u': begin
                  Inc(AIndex);
                  if AIndex + 3 < ALength then
-                   LBuilder.Append(Char(StrToInt('$'+Copy(AJson+AIndex, 0, 4))))
+                 begin
+                   var LHex: string;
+                   SetString(LHex, AJson + AIndex, 4);
+                   LBuilder.Append(Char(StrToInt('$' + LHex)));
+                 end
                  else
                    raise EJsonFlowParseError.Create('Invalid unicode escape');
                  Inc(AIndex, 3);
@@ -266,7 +270,9 @@ begin
       LIsFloat := True;
     Inc(AIndex);
   end;
-  LStr := Copy(AJson, LStart + 1, AIndex - LStart);
+  // SetString copia só o trecho do número — Copy(AJson, ...) com PChar
+  // convertia o restante inteiro do buffer para String a cada número (O(n²)).
+  SetString(LStr, AJson + LStart, AIndex - LStart);
   if LIsFloat then
     Result := TJSONValueFloat.Create(StrToFloatDef(LStr, 0.0, FFormatSettings))
   else
@@ -341,8 +347,10 @@ begin
              LValue := TJSONValueString.Create(LString);
            Result := LValue;
          end;
+    // StrLComp compara in-place — Copy(AJson + AIndex, ...) com PChar convertia
+    // o restante inteiro do buffer para String a cada literal (O(n²)).
     't': begin
-           if Copy(AJson + AIndex, 1, 4) = 'true' then
+           if (AIndex + 3 < ALength) and (StrLComp(AJson + AIndex, 'true', 4) = 0) then
            begin
              LValue := TJSONValueBoolean.Create(True);
              Result := LValue;
@@ -352,7 +360,7 @@ begin
              raise EJsonFlowParseError.Create('Invalid JSON value');
          end;
     'f': begin
-           if Copy(AJson + AIndex, 1, 5) = 'false' then
+           if (AIndex + 4 < ALength) and (StrLComp(AJson + AIndex, 'false', 5) = 0) then
            begin
              LValue := TJSONValueBoolean.Create(False);
              Result := LValue;
@@ -362,7 +370,7 @@ begin
              raise EJsonFlowParseError.Create('Invalid JSON value');
          end;
     'n': begin
-           if Copy(AJson + AIndex, 1, 4) = 'null' then
+           if (AIndex + 3 < ALength) and (StrLComp(AJson + AIndex, 'null', 4) = 0) then
            begin
              LValue := TJSONValueNull.Create;
              Result := LValue;

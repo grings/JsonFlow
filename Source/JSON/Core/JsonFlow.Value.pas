@@ -187,13 +187,15 @@ type
 
 implementation
 
+var
+  // TFormatSettings.Create('en-US') consulta o locale do SO (API NLS) — pagar
+  // isso por instância de valor JSON dominava o custo do parse. Inicializa uma
+  // vez e copia o record (strings refcounted, cópia barata).
+  GValueFormatSettings: TFormatSettings;
+
 constructor TJSONValue.Create;
 begin
-  FFormatSettings := TFormatSettings.Create('en-US');
-  FFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
-  FFormatSettings.DateSeparator := '-';
-  FFormatSettings.TimeSeparator := ':';
-  FFormatSettings.DecimalSeparator := '.';
+  FFormatSettings := GValueFormatSettings;
 end;
 
 destructor TJSONValue.Destroy;
@@ -703,5 +705,12 @@ procedure TJSONValueDateTime._SetAsString(const AValue: String);
 begin
   FValue := Iso8601ToDateTime(AValue, True);
 end;
+
+initialization
+  GValueFormatSettings := TFormatSettings.Create('en-US');
+  GValueFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
+  GValueFormatSettings.DateSeparator := '-';
+  GValueFormatSettings.TimeSeparator := ':';
+  GValueFormatSettings.DecimalSeparator := '.';
 
 end.
