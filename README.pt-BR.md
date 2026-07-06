@@ -55,7 +55,7 @@ O JsonFlow também foi comparado com a popular biblioteca [X-SuperObject](https:
 
 ### 🐧 Build Multiplataforma — Win32 / Win64 / Linux64
 
-> **Win32 / Win64:** ✅ verificado (2026-06-20, backend real em produção). **Linux64:** as units usadas pelo backend compilam e rodam no Linux; um **build standalone do framework completo** esbarra hoje num **item interno (não-plataforma)** — `IEventMiddleware` está declarado em **ambas** `JsonFlow.Types` e `JsonFlow.Interfaces`, então puxar as duas é ambíguo. Escolher a declaração canônica é um follow-up — **não** é problema de plataforma.
+> **Win32 / Win64:** ✅ verificado (2026-06-20, backend real em produção). **Linux64:** as units usadas pelo backend compilam e rodam no Linux. A duplicidade de `IEventMiddleware` documentada anteriormente foi resolvida (`JsonFlow.Interfaces` é a unit canônica); re-verificar o build standalone completo no Linux é o follow-up restante.
 
 **Para buildar um app consumidor no Linux64:** instale a plataforma Linux 64-bit (RAD Studio GetIt / `GetItCmd -if=delphi_linux -ae`), forneça um SDK Linux (SDK Manager do RAD Studio + PAServer, **ou** um sysroot montado de um toolchain WSL/Linux passado ao `dcclinux64` via `--syslibroot` / `--libpath`), e compile com `dcclinux64`.
 

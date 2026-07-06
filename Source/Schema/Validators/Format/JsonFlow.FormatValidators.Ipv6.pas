@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -40,6 +40,11 @@ implementation
 uses
   JsonFlow.FormatRegistry;
 
+var
+  // Regexes compiladas UMA vez no load da unit (antes: TRegEx.Create
+  // por valor validado dentro do DoValidate)
+  GRegex1: TRegEx;
+
 { TIpv6FormatValidator }
 
 constructor TIpv6FormatValidator.Create;
@@ -64,7 +69,7 @@ begin
     Exit;
   end;
   
-  LRegex := TRegEx.Create('^[0-9a-fA-F]+$');
+  LRegex := GRegex1;
   Result := LRegex.IsMatch(APart);
 end;
 
@@ -208,5 +213,8 @@ procedure RegisterIpv6Validator;
 begin
   TFormatRegistry.RegisterValidator('ipv6', TIpv6FormatValidator.Create);
 end;
+
+initialization
+  GRegex1 := TRegEx.Create('^[0-9a-fA-F]+$');
 
 end.

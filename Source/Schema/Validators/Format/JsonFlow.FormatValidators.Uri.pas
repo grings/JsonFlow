@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -38,6 +38,11 @@ implementation
 uses
   JsonFlow.FormatRegistry;
 
+var
+  // Regexes compiladas UMA vez no load da unit (antes: TRegEx.Create
+  // por valor validado dentro do DoValidate)
+  GRegex1: TRegEx;
+
 { TUriFormatValidator }
 
 constructor TUriFormatValidator.Create;
@@ -56,7 +61,7 @@ begin
   end;
   
   // Regex mais abrangente para URIs (http, https, ftp, etc.)
-  LRegex := TRegEx.Create('^(https?|ftp)://[^\s/$.?#].[^\s]*$', [roIgnoreCase]);
+  LRegex := GRegex1;
   Result := LRegex.IsMatch(AValue);
 end;
 
@@ -75,5 +80,8 @@ procedure RegisterUriValidator;
 begin
   TFormatRegistry.RegisterValidator('uri', TUriFormatValidator.Create);
 end;
+
+initialization
+  GRegex1 := TRegEx.Create('^(https?|ftp)://[^\s/$.?#].[^\s]*$', [roIgnoreCase]);
 
 end.

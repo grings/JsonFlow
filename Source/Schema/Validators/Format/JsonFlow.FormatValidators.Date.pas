@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -38,6 +38,11 @@ implementation
 uses
   JsonFlow.FormatRegistry;
 
+var
+  // Regexes compiladas UMA vez no load da unit (antes: TRegEx.Create
+  // por valor validado dentro do DoValidate)
+  GRegex1: TRegEx;
+
 { TDateFormatValidator }
 
 constructor TDateFormatValidator.Create;
@@ -58,7 +63,7 @@ begin
   end;
   
   // Primeiro verifica o formato YYYY-MM-DD
-  LRegex := TRegEx.Create('^\d{4}-\d{2}-\d{2}$');
+  LRegex := GRegex1;
   if not LRegex.IsMatch(AValue) then
   begin
     Result := False;
@@ -100,7 +105,7 @@ begin
     Result := 'Date cannot be empty'
   else
   begin
-    LRegex := TRegEx.Create('^\d{4}-\d{2}-\d{2}$');
+    LRegex := GRegex1;
     if not LRegex.IsMatch(AValue) then
       Result := Format('String "%s" does not match date format YYYY-MM-DD', [AValue])
     else
@@ -128,5 +133,8 @@ procedure RegisterDateValidator;
 begin
   TFormatRegistry.RegisterValidator('date', TDateFormatValidator.Create);
 end;
+
+initialization
+  GRegex1 := TRegEx.Create('^\d{4}-\d{2}-\d{2}$');
 
 end.

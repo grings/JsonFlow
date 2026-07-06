@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -38,6 +38,11 @@ implementation
 uses
   JsonFlow.FormatRegistry;
 
+var
+  // Regexes compiladas UMA vez no load da unit (antes: TRegEx.Create
+  // por valor validado dentro do DoValidate)
+  GRegex1: TRegEx;
+
 { TDateTimeFormatValidator }
 
 constructor TDateTimeFormatValidator.Create;
@@ -60,7 +65,7 @@ begin
   end;
   
   // Primeiro verifica o formato ISO 8601
-  LRegex := TRegEx.Create('^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})?$');
+  LRegex := GRegex1;
   if not LRegex.IsMatch(AValue) then
   begin
     Result := False;
@@ -148,7 +153,7 @@ begin
     Result := 'Date-time cannot be empty'
   else
   begin
-    LRegex := TRegEx.Create('^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})?$');
+    LRegex := GRegex1;
     if not LRegex.IsMatch(AValue) then
       Result := Format('String "%s" does not match ISO 8601 date-time format (YYYY-MM-DDTHH:MM:SS[.sss][Z|±HH:MM])', [AValue])
     else
@@ -161,5 +166,8 @@ procedure RegisterDateTimeValidator;
 begin
   TFormatRegistry.RegisterValidator('date-time', TDateTimeFormatValidator.Create);
 end;
+
+initialization
+  GRegex1 := TRegEx.Create('^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})?$');
 
 end.

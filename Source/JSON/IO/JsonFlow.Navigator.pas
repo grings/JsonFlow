@@ -177,17 +177,13 @@ end;
 
 function TJSONNavigator.GetInteger(const APath: String): Int64;
 var
-  LElement: IJSONElement;
   LValue: IJSONValue;
 begin
-  LElement := GetValue(APath);
-  if Assigned(LElement) then
-  begin
-    if Supports(LElement, IJSONValue, LValue) then
-      Result := LValue.AsInteger
-    else
-      raise Exception.Create('Not a numeric value in "' + APath + '"');
-  end
+  // Contrato alinhado aos irmãos (GetString/GetFloat/GetBoolean): path
+  // ausente ou não-numérico retorna default — antes este era o único getter
+  // que lançava exceção para container no path.
+  if Supports(GetValue(APath), IJSONValue, LValue) then
+    Result := LValue.AsInteger
   else
     Result := 0;
 end;

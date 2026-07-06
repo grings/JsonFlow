@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -50,41 +50,31 @@ procedure RegisterBrazilianLicensePlateValidator;
 
 implementation
 
+var
+  GPlateRegexes: array[0..3] of TRegEx;
+
+
 { TBrazilianLicensePlateValidator }
 
 function TBrazilianLicensePlateValidator.DoValidate(const AValue: string): Boolean;
 var
-  LPatterns: TArray<string>;
-  LPattern: string;
+  LUpper: string;
 begin
-  Result := False;
-  
-  // Padrões para placas brasileiras
-  LPatterns := [
-    // Formato antigo com hífen: ABC-1234
-    '^[A-Z]{3}-\d{4}$',
-    // Formato antigo sem hífen: ABC1234
-    '^[A-Z]{3}\d{4}$',
-    // Formato Mercosul sem hífen: ABC1D23
-    '^[A-Z]{3}\d[A-Z]\d{2}$',
-    // Formato Mercosul com hífen: ABC-1D23
-    '^[A-Z]{3}-\d[A-Z]\d{2}$'
-  ];
-  
-  // Testa cada padrão
-  for LPattern in LPatterns do
-  begin
-    if TRegEx.IsMatch(AValue.ToUpper, LPattern) then
-    begin
-      Result := True;
-      Break;
-    end;
-  end;
+  // Regexes pre-compiladas no load da unit; ToUpper aplicado UMA vez
+  LUpper := AValue.ToUpper;
+  Result := GPlateRegexes[0].IsMatch(LUpper) or GPlateRegexes[1].IsMatch(LUpper) or
+            GPlateRegexes[2].IsMatch(LUpper) or GPlateRegexes[3].IsMatch(LUpper);
 end;
 
 procedure RegisterBrazilianLicensePlateValidator;
 begin
   TFormatRegistry.RegisterValidator('brazilian-license-plate', TBrazilianLicensePlateValidator.Create('brazilian-license-plate', 'Placa brasileira inválida'));
 end;
+
+initialization
+  GPlateRegexes[0] := TRegEx.Create('^[A-Z]{3}-\d{4}$');        // ABC-1234
+  GPlateRegexes[1] := TRegEx.Create('^[A-Z]{3}\d{4}$');         // ABC1234
+  GPlateRegexes[2] := TRegEx.Create('^[A-Z]{3}\d[A-Z]\d{2}$'); // ABC1D23 (Mercosul)
+  GPlateRegexes[3] := TRegEx.Create('^[A-Z]{3}-\d[A-Z]\d{2}$');// ABC-1D23 (Mercosul)
 
 end.

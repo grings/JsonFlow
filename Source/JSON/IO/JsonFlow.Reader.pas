@@ -110,8 +110,27 @@ function TJSONReader._ParseString(const AJson: PChar; var AIndex: Integer; ALeng
 var
   LBuilder: TStringBuilder;
   LChar: Char;
+  LStart: Integer;
+  LScan: Integer;
 begin
-  LBuilder := TStringBuilder.Create;
+  // Fast-path: a imensa maioria das strings não tem escape — localiza a aspa
+  // final e copia o trecho inteiro com SetString, sem TStringBuilder (que era
+  // alocado por string parseada, inclusive para cada CHAVE de objeto).
+  LStart := AIndex + 1;
+  LScan := LStart;
+  while (LScan < ALength) and (AJson[LScan] <> '"') and (AJson[LScan] <> '\') do
+    Inc(LScan);
+  if LScan >= ALength then
+    raise EJsonFlowParseError.Create('Unterminated string');
+  if AJson[LScan] = '"' then
+  begin
+    SetString(Result, AJson + LStart, LScan - LStart);
+    AIndex := LScan + 1; // Pula a aspa final
+    Exit;
+  end;
+
+  // Caminho lento (há escapes): builder com capacidade estimada
+  LBuilder := TStringBuilder.Create(LScan - LStart + 32);
   try
     Inc(AIndex); // Pula a aspa inicial
     while (AIndex < ALength) and (AJson[AIndex] <> '"') do
