@@ -26,7 +26,6 @@ type
   TUniqueItemsRule = class(TBaseValidationRule)
   private
     FRequireUnique: Boolean;
-    function ItemsAreEqual(const AItem1, AItem2: IJSONElement): Boolean;
     function ElementToString(const AElement: IJSONElement): string;
   public
     constructor Create(ARequireUnique: Boolean);
@@ -74,23 +73,11 @@ begin
     Result := 'unknown';
 end;
 
-function TUniqueItemsRule.ItemsAreEqual(const AItem1, AItem2: IJSONElement): Boolean;
-var
-  LStr1, LStr2: string;
-begin
-  // Comparação simplificada baseada na representação string
-  // Em uma implementação completa, seria necessária uma comparação estrutural profunda
-  LStr1 := ElementToString(AItem1);
-  LStr2 := ElementToString(AItem2);
-  Result := LStr1 = LStr2;
-end;
-
 function TUniqueItemsRule.Validate(const AValue: IJSONElement; const AContext: TObject): TValidationResult;
 var
   LArray: IJSONArray;
   LError: TValidationError;
   LValidationContext: TValidationContext;
-  LItem1, LItem2: IJSONElement;
   LAllErrors: TList<TValidationError>;
   LHasErrors: Boolean;
   I, J: Integer;
@@ -121,28 +108,32 @@ begin
   LAllErrors := TList<TValidationError>.Create;
   try
     LHasErrors := False;
-    
-    // Verificar se há itens duplicados
-    for I := 0 to LArray.Count - 2 do
-    begin
-      LItem1 := LArray.GetItem(I);
-      for J := I + 1 to LArray.Count - 1 do
+
+    // O(n) com hash da forma canônica de cada item — antes era loop duplo
+    // O(n²) com 2 serializações por PAR comparado.
+    var LSeen := TDictionary<string, Integer>.Create(LArray.Count * 2);
+    try
+      for J := 0 to LArray.Count - 1 do
       begin
-        LItem2 := LArray.GetItem(J);
-        if ItemsAreEqual(LItem1, LItem2) then
+        var LKey := ElementToString(LArray.GetItem(J));
+        if LSeen.TryGetValue(LKey, I) then
         begin
           LHasErrors := True;
           LError := CreateValidationError(
             LValidationContext.GetFullPath + '/' + IntToStr(J),
             Format('Duplicate item found at index %d (same as index %d)', [J, I]),
-            ElementToString(LItem2),
+            LKey,
             'unique value',
             'uniqueItems',
             LValidationContext.GetFullSchemaPath + '/uniqueItems'
           );
           LAllErrors.Add(LError);
-        end;
+        end
+        else
+          LSeen.Add(LKey, J);
       end;
+    finally
+      LSeen.Free;
     end;
 
     if LHasErrors then

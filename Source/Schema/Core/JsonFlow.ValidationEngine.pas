@@ -47,17 +47,29 @@ type
     function Evaluate(const AValue: IJSONElement; const ASubschema: IJSONElement; const AContext: TValidationContext): TValidationResult;
   end;
 
-  // Contexto de valida??o simplificado
+  // Contexto de validação com paths INCREMENTAIS: os full-paths são mantidos
+  // como strings atualizadas no push/pop (O(seg)) e lidos em O(1) —
+  // GetFullPath/GetFullSchemaPath eram reconstruídos por concatenação em TODO
+  // TValidationResult, inclusive nos de sucesso que ninguém lê.
   TValidationContext = class
   private
     FSchema: IJSONElement;
     FPath: string;
     FParent: TValidationContext;
     FPathStack: TArray<string>;
+    FPathLens: TArray<Integer>;
+    FPathDepth: Integer;
+    FFullPath: string;
     FSchemaPath: string;
     FSchemaPathStack: TArray<string>;
+    FSchemaLens: TArray<Integer>;
+    FSchemaDepth: Integer;
+    FFullSchemaPath: string;
     FResolver: ISchemaCompiler;
     FEvaluator: ISubschemaEvaluator;
+    procedure _SetSchemaPath(const AValue: string);
+    procedure _PushPath(const ASegment: string);
+    procedure _PushSchema(const ASegment: string);
   public
     constructor Create(const ASchema: IJSONElement; const APath: string; AParent: TValidationContext; AResolver: ISchemaCompiler); overload;
     constructor Create(const ASchema: IJSONElement; const APath: string; AParent: TValidationContext; AResolver: ISchemaCompiler; const AEvaluator: ISubschemaEvaluator); overload;
@@ -72,7 +84,7 @@ type
     procedure PopSchemaSegment;
     property Schema: IJSONElement read FSchema;
     property Path: string read FPath;
-    property SchemaPath: string read FSchemaPath write FSchemaPath;
+    property SchemaPath: string read FSchemaPath write _SetSchemaPath;
     property Resolver: ISchemaCompiler read FResolver write FResolver;
     property Evaluator: ISubschemaEvaluator read FEvaluator write FEvaluator;
   end;
@@ -92,19 +104,26 @@ begin
   inherited Create;
   FSchema := ASchema;
   FPath := APath;
+  FFullPath := APath;
+  FPathDepth := 0;
   FParent := AParent;
   FResolver := AResolver;
   FEvaluator := nil;
-  SetLength(FPathStack, 0);
   if Assigned(AParent) then
   begin
     FSchemaPath := AParent.FSchemaPath;
-    FSchemaPathStack := Copy(AParent.FSchemaPathStack);
+    // Cópia da string incremental é O(1) (refcount); os stacks copiam só a
+    // profundidade em uso.
+    FFullSchemaPath := AParent.FFullSchemaPath;
+    FSchemaDepth := AParent.FSchemaDepth;
+    FSchemaPathStack := Copy(AParent.FSchemaPathStack, 0, FSchemaDepth);
+    FSchemaLens := Copy(AParent.FSchemaLens, 0, FSchemaDepth);
   end
   else
   begin
     FSchemaPath := '';
-    SetLength(FSchemaPathStack, 0);
+    FFullSchemaPath := '';
+    FSchemaDepth := 0;
   end;
 end;
 
@@ -123,66 +142,102 @@ begin
 end;
 
 function TValidationContext.GetFullPath: string;
-var
-  LFor: Integer;
 begin
-  Result := FPath;
-  for LFor := 0 to Length(FPathStack) - 1 do
-  begin
-    // Usar formato JSON Pointer padrão com separador '/'
-    Result := Result + '/' + FPathStack[LFor];
-  end;
-
-  // Se o resultado estiver vazio, retornar a raiz JSON Pointer
-  if Result = '' then
-    Result := '/';
+  // O(1): mantido incrementalmente no push/pop
+  if FFullPath = '' then
+    Result := '/'
+  else
+    Result := FFullPath;
 end;
 
 function TValidationContext.GetFullSchemaPath: string;
+begin
+  Result := FFullSchemaPath;
+end;
+
+procedure TValidationContext._PushPath(const ASegment: string);
+begin
+  if FPathDepth = Length(FPathLens) then
+  begin
+    SetLength(FPathLens, (FPathDepth + 8) * 2);
+    SetLength(FPathStack, Length(FPathLens));
+  end;
+  FPathLens[FPathDepth] := Length(FFullPath);
+  FPathStack[FPathDepth] := ASegment;
+  Inc(FPathDepth);
+  FFullPath := FFullPath + '/' + ASegment;
+end;
+
+procedure TValidationContext._PushSchema(const ASegment: string);
+begin
+  if FSchemaDepth = Length(FSchemaLens) then
+  begin
+    SetLength(FSchemaLens, (FSchemaDepth + 8) * 2);
+    SetLength(FSchemaPathStack, Length(FSchemaLens));
+  end;
+  FSchemaLens[FSchemaDepth] := Length(FFullSchemaPath);
+  FSchemaPathStack[FSchemaDepth] := ASegment;
+  Inc(FSchemaDepth);
+  FFullSchemaPath := FFullSchemaPath + '/' + ASegment;
+end;
+
+procedure TValidationContext._SetSchemaPath(const AValue: string);
 var
   LFor: Integer;
 begin
-  Result := FSchemaPath;
-  for LFor := 0 to Length(FSchemaPathStack) - 1 do
-    Result := Result + '/' + FSchemaPathStack[LFor];
+  // Troca de base (ex.: resolução de $ref): reconstrói o full path a partir
+  // da nova base preservando os segmentos já empilhados.
+  FSchemaPath := AValue;
+  FFullSchemaPath := AValue;
+  for LFor := 0 to FSchemaDepth - 1 do
+  begin
+    FSchemaLens[LFor] := Length(FFullSchemaPath);
+    FFullSchemaPath := FFullSchemaPath + '/' + FSchemaPathStack[LFor];
+  end;
 end;
 
 procedure TValidationContext.PushProperty(const APropertyName: string);
 begin
-  SetLength(FPathStack, Length(FPathStack) + 1);
   // Aplicar escape JSON Pointer se necessário
-  FPathStack[Length(FPathStack) - 1] := EscapeJSONPointer(APropertyName);
+  _PushPath(EscapeJSONPointer(APropertyName));
 end;
 
 procedure TValidationContext.PopProperty;
 begin
-  if Length(FPathStack) > 0 then
-    SetLength(FPathStack, Length(FPathStack) - 1);
+  if FPathDepth > 0 then
+  begin
+    Dec(FPathDepth);
+    SetLength(FFullPath, FPathLens[FPathDepth]);
+  end;
 end;
 
 procedure TValidationContext.PushArrayIndex(AIndex: Integer);
 begin
-  SetLength(FPathStack, Length(FPathStack) + 1);
   // No formato JSON Pointer, índices de array são tratados como strings simples
-  FPathStack[Length(FPathStack) - 1] := IntToStr(AIndex);
+  _PushPath(IntToStr(AIndex));
 end;
 
 procedure TValidationContext.PushSchemaSegment(const ASegment: string);
 begin
-  SetLength(FSchemaPathStack, Length(FSchemaPathStack) + 1);
-  FSchemaPathStack[Length(FSchemaPathStack) - 1] := EscapeJSONPointer(ASegment);
+  _PushSchema(EscapeJSONPointer(ASegment));
 end;
 
 procedure TValidationContext.PopSchemaSegment;
 begin
-  if Length(FSchemaPathStack) > 0 then
-    SetLength(FSchemaPathStack, Length(FSchemaPathStack) - 1);
+  if FSchemaDepth > 0 then
+  begin
+    Dec(FSchemaDepth);
+    SetLength(FFullSchemaPath, FSchemaLens[FSchemaDepth]);
+  end;
 end;
 
 procedure TValidationContext.PopArrayIndex;
 begin
-  if Length(FPathStack) > 0 then
-    SetLength(FPathStack, Length(FPathStack) - 1);
+  if FPathDepth > 0 then
+  begin
+    Dec(FPathDepth);
+    SetLength(FFullPath, FPathLens[FPathDepth]);
+  end;
 end;
 
 { Fun??es auxiliares }
@@ -218,15 +273,22 @@ begin
 end;
 
 function CombineResults(const AResult1, AResult2: TValidationResult): TValidationResult;
+var
+  LFor: Integer;
+  LBase: Integer;
 begin
   Result := AResult1;
   Result.IsValid := AResult1.IsValid and AResult2.IsValid;
 
   if Length(AResult2.Errors) > 0 then
   begin
-    // Adicionar erros do segundo resultado
-    SetLength(Result.Errors, Length(AResult1.Errors) + Length(AResult2.Errors));
-    Move(AResult2.Errors[0], Result.Errors[Length(AResult1.Errors)], Length(AResult2.Errors) * SizeOf(TValidationError));
+    // Atribuição elemento a elemento — o Move anterior copiava os ponteiros
+    // das strings do record SEM incrementar refcount (duas arrays finalizando
+    // as mesmas strings = corrupção de memória latente).
+    LBase := Length(AResult1.Errors);
+    SetLength(Result.Errors, LBase + Length(AResult2.Errors));
+    for LFor := 0 to Length(AResult2.Errors) - 1 do
+      Result.Errors[LBase + LFor] := AResult2.Errors[LFor];
   end;
 end;
 

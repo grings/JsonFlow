@@ -39,6 +39,7 @@ type
     function _ExtractArrayIndex(const APart: String; out AIndex: Integer): Boolean;
     function _VariantToElement(const AValue: Variant): IJSONElement;
     function _GetNavigator: TJSONNavigator;
+    procedure _ResolveCurrent;
     procedure _UpdateContext(const AKey: String);
     procedure _ValidateContext(const AMethod: String);
     function _GetCurrentPath: String;
@@ -68,6 +69,12 @@ type
     // root muda) — antes cada SetValue/AddToArray/RemoveKey alocava um novo.
     FPathNavigator: TJSONNavigator;
     FPathNavigatorRoot: IJSONElement;
+    // Cache do contexto corrente resolvido (auto-invalidado por identidade):
+    // evita 2 QueryInterface por Add fluente — FCurrent só muda em
+    // Push/Pop/NavigateTo/LoadJSON/Clear.
+    FCachedCurrent: IJSONElement;
+    FCurrentObj: IJSONObject;
+    FCurrentArr: IJSONArray;
     procedure _Pop;
     procedure _Push(const AElement: IJSONElement; const AName: String);
   public
@@ -193,6 +200,20 @@ begin
   FValidationErrors.Free;
   FSuggestionCache.Free;
   inherited;
+end;
+
+procedure TJSONComposer._ResolveCurrent;
+begin
+  if FCurrent <> FCachedCurrent then
+  begin
+    FCachedCurrent := FCurrent;
+    if not Supports(FCurrent, IJSONObject, FCurrentObj) then
+      FCurrentObj := nil;
+    if Assigned(FCurrentObj) then
+      FCurrentArr := nil
+    else if not Supports(FCurrent, IJSONArray, FCurrentArr) then
+      FCurrentArr := nil;
+  end;
 end;
 
 function TJSONComposer._GetNavigator: TJSONNavigator;
@@ -485,9 +506,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, TJSONValueString.Create(AValue))
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(TJSONValueString.Create(AValue));
   Result := Self;
 end;
@@ -497,9 +521,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, TJSONValueInteger.Create(AValue))
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(TJSONValueInteger.Create(AValue));
   Result := Self;
 end;
@@ -509,9 +536,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, TJSONValueFloat.Create(AValue))
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(TJSONValueFloat.Create(AValue));
   Result := Self;
 end;
@@ -521,9 +551,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, TJSONValueBoolean.Create(AValue))
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(TJSONValueBoolean.Create(AValue));
   Result := Self;
 end;
@@ -533,9 +566,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, TJSONValueDateTime.Create(AValue))
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(TJSONValueDateTime.Create(AValue));
   Result := Self;
 end;
@@ -545,9 +581,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, AValue)
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(AValue);
   Result := Self;
 end;
@@ -557,9 +596,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, TJSONValueString.Create(AValue))
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(TJSONValueString.Create(AValue));
   Result := Self;
 end;
@@ -569,7 +611,10 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
   begin
     case VarType(AValue) and varTypeMask of
       varInteger, varShortInt, varByte, varWord, varLongWord, varInt64, varUInt64: LObject.Add(AName, TJSONValueInteger.Create(AValue));
@@ -581,7 +626,7 @@ begin
       LObject.Add(AName, TJSONValueString.Create(VarToStr(AValue)));
     end;
   end
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
   begin
     case VarType(AValue) and varTypeMask of
       varInteger, varShortInt, varByte, varWord, varLongWord, varInt64, varUInt64: LArray.Add(TJSONValueInteger.Create(AValue));
@@ -601,9 +646,12 @@ var
   LObject: IJSONObject;
   LArray: IJSONArray;
 begin
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     LObject.Add(AName, TJSONValueNull.Create)
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
     LArray.Add(TJSONValueNull.Create);
   Result := Self;
 end;
@@ -638,9 +686,12 @@ var
 begin
   LReader := TJSONReader.Create;
   try
-    if Supports(FCurrent, IJSONObject, LObject) then
+    _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
       LObject.Add(AName, LReader.Read(AJson))
-    else if Supports(FCurrent, IJSONArray, LArray) then
+    else if Assigned(LArray) then
       LArray.Add(LReader.Read(AJson));
   finally
     LReader.Free;
@@ -757,7 +808,10 @@ var
 begin
   if not Assigned(AElement) then
     Exit(Self);
-  if Supports(FCurrent, IJSONObject, LObject) then
+  _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
   begin
     if Supports(AElement, IJSONObject) then
     begin
@@ -766,7 +820,7 @@ begin
         LObject.Add(LPairs[LFor].Key, LPairs[LFor].Value);
     end;
   end
-  else if Supports(FCurrent, IJSONArray, LArray) then
+  else if Assigned(LArray) then
   begin
     if Supports(AElement, IJSONArray) then
     begin
@@ -1075,13 +1129,16 @@ var
 begin
   if Assigned(ACallback) then
   begin
-    if Supports(FCurrent, IJSONObject, LObject) then
+    _ResolveCurrent;
+  LObject := FCurrentObj;
+  LArray := FCurrentArr;
+  if Assigned(LObject) then
     begin
       LPairs := LObject.Pairs;
       for LFor := 0 to Length(LPairs) - 1 do
         ACallback(LPairs[LFor].Key, LPairs[LFor].Value);
     end
-    else if Supports(FCurrent, IJSONArray, LArray) then
+    else if Assigned(LArray) then
     begin
       LItems := LArray.Items;
       for LFor := 0 to Length(LItems) - 1 do

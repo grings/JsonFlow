@@ -45,7 +45,9 @@ implementation
 constructor TJSONPair.Create(const AKey: String; const AValue: IJSONElement);
 begin
   inherited Create;
-  if Trim(AKey) = '' then
+  // Trim aloca string; só paga quando o 1º char é whitespace (caso raro) —
+  // este constructor roda para CADA par de CADA objeto parseado.
+  if (AKey = '') or ((AKey[1] <= ' ') and (Trim(AKey) = '')) then
     raise EArgumentException.Create('Key cannot be empty');
   FKey := AKey;
   FValue := AValue;

@@ -30,6 +30,7 @@ uses
   JsonFlow.Objects,
   JsonFlow.Reader,
   JsonFlow.Arrays,
+  JsonFlow.Utils,
   JsonFlow.Value;
 
 type
@@ -364,9 +365,12 @@ begin
       
     ftFloat, ftCurrency, ftBCD, ftFMTBcd:
       AField.AsFloat := LValue.AsFloat;
-      
-//    ftDate, ftTime, ftDateTime, ftTimeStamp:
-//      AField.AsDateTime := LValue.AsDateTime;
+
+    // Reativado: estava comentado (IJSONValue não tem AsDateTime), então datas
+    // caíam no else e viravam AsString dependente de locale — quebrando
+    // round-trip com a serialização ISO-8601 do lado Dataset->JSON.
+    ftDate, ftTime, ftDateTime, ftTimeStamp:
+      AField.AsDateTime := Iso8601ToDateTime(LValue.AsString, True);
 
     ftBlob, ftGraphic, ftTypedBinary:
       begin
@@ -537,9 +541,11 @@ var
 begin
   if AClearFirst then
   begin
-    ADataset.Close;
-    ADataset.Open;
-//    ADataset.EmptyDataSet;
+    // Deleta os registros de fato — o Close/Open anterior, em datasets de
+    // query, apenas re-executava o SELECT (não limpava nada).
+    ADataset.First;
+    while not ADataset.IsEmpty do
+      ADataset.Delete;
   end;
   
   for LFor := 0 to AArray.Count - 1 do
@@ -610,53 +616,52 @@ end;
 
 function TJSONDatasetConverter.CompareRecordWithJSON(ADataset: TDataset; const AJSON: string): TArray<string>;
 var
-  LComposer: TJSONComposer;
+  LReader: IJSONReader;
   LObject: IJSONObject;
+  LValue: IJSONValue;
   LChangedFields: TList<string>;
   LFor: Integer;
   LField: TField;
   LFieldName: string;
   LElement: IJSONElement;
-  LCurrentValue, LJSONValue: Variant;
+  LDiffers: Boolean;
 begin
+  // Implementação real — o corpo anterior estava inteiro comentado (usava
+  // membros inexistentes como GetJSONElement/AsDateTime) e a API sempre
+  // retornava array vazio, mentindo "nenhuma diferença".
   LChangedFields := TList<string>.Create;
-  LComposer := TJSONComposer.Create;
   try
-    LComposer.LoadJSON(AJSON);
-//    if Supports(LComposer.GetJSONElement, IJSONObject, LObject) then
-//    begin
-//      for LFor := 0 to ADataset.FieldCount - 1 do
-//      begin
-//        LField := ADataset.Fields[LFor];
-//        LFieldName := FormatFieldName(LField.FieldName);
-//
-//        if LObject.ContainsKey(LFieldName) then
-//        begin
-//          LElement := LObject.GetValue(LFieldName);
-//          LCurrentValue := LField.Value;
-//
-//          if Supports(LElement, IJSONValue) then
-//          begin
-//            case LField.DataType of
-//              ftString, ftWideString: LJSONValue := IJSONValue(LElement).AsString;
-//              ftInteger, ftSmallint: LJSONValue := IJSONValue(LElement).AsInt64;
-//              ftFloat: LJSONValue := IJSONValue(LElement).AsFloat;
-//              ftBoolean: LJSONValue := IJSONValue(LElement).AsBoolean;
-//              ftDateTime: LJSONValue := IJSONValue(LElement).AsDateTime;
-//            else
-//              LJSONValue := IJSONValue(LElement).AsString;
-//            end;
-//
-//            if LCurrentValue <> LJSONValue then
-//              LChangedFields.Add(LFieldName);
-//          end;
-//        end;
-//      end;
-//    end;
+    LReader := TJSONReader.Create;
+    if Supports(LReader.Read(AJSON), IJSONObject, LObject) then
+    begin
+      for LFor := 0 to ADataset.FieldCount - 1 do
+      begin
+        LField := ADataset.Fields[LFor];
+        LFieldName := FormatFieldName(LField.FieldName);
+
+        if LObject.TryGetValue(LFieldName, LElement) and
+           Supports(LElement, IJSONValue, LValue) then
+        begin
+          case LField.DataType of
+            ftSmallint, ftInteger, ftWord, ftAutoInc, ftLargeint:
+              LDiffers := LField.AsLargeInt <> LValue.AsInteger;
+            ftFloat, ftCurrency, ftBCD, ftFMTBcd:
+              LDiffers := LField.AsFloat <> LValue.AsFloat;
+            ftBoolean:
+              LDiffers := LField.AsBoolean <> LValue.AsBoolean;
+            ftDate, ftTime, ftDateTime, ftTimeStamp:
+              LDiffers := LField.AsDateTime <> Iso8601ToDateTime(LValue.AsString, True);
+          else
+            LDiffers := LField.AsString <> LValue.AsString;
+          end;
+          if LDiffers then
+            LChangedFields.Add(LFieldName);
+        end;
+      end;
+    end;
 
     Result := LChangedFields.ToArray;
   finally
-    LComposer.Free;
     LChangedFields.Free;
   end;
 end;

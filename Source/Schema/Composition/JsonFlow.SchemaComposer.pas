@@ -1219,7 +1219,10 @@ begin
       if Assigned(LDefs) and not LRootObject.ContainsKey('$defs') then
       begin
         LRootObject.Add('$defs', LDefs);
-        _Log('Propagated $defs to FRoot: ' + LDefs.AsJSON);
+        // Guard no call-site: o argumento serializava o $defs INTEIRO
+        // (AsJSON) mesmo com log desligado.
+        if Assigned(FLogProc) then
+          _Log('Propagated $defs to FRoot: ' + LDefs.AsJSON);
       end;
     end;
   end;

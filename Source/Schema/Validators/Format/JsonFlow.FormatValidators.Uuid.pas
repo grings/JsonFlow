@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -38,6 +38,11 @@ implementation
 uses
   JsonFlow.FormatRegistry;
 
+var
+  // Regexes compiladas UMA vez no load da unit (antes: TRegEx.Create
+  // por valor validado dentro do DoValidate)
+  GRegex1: TRegEx;
+
 { TUuidFormatValidator }
 
 constructor TUuidFormatValidator.Create;
@@ -57,7 +62,7 @@ begin
   
   // Formato UUID: 8-4-4-4-12 caracteres hexadecimais
   // Exemplo: 550e8400-e29b-41d4-a716-446655440000
-  LRegex := TRegEx.Create('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+  LRegex := GRegex1;
   Result := LRegex.IsMatch(AValue);
 end;
 
@@ -90,5 +95,8 @@ procedure RegisterUuidValidator;
 begin
   TFormatRegistry.RegisterValidator('uuid', TUuidFormatValidator.Create);
 end;
+
+initialization
+  GRegex1 := TRegEx.Create('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
 
 end.

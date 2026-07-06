@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -48,22 +48,25 @@ procedure RegisterCEPValidator;
 
 implementation
 
+var
+  GCEPRegex: TRegEx;
+
+
 { TCEPFormatValidator }
 
 function TCEPFormatValidator.DoValidate(const AValue: string): Boolean;
-var
-  LPattern: string;
 begin
-  // Padrão para CEP: 8 dígitos com ou sem hífen
-  // Formatos aceitos: 12345-678 ou 12345678
-  LPattern := '^\d{5}-?\d{3}$';
-  
-  Result := TRegEx.IsMatch(AValue, LPattern);
+  // Padrão para CEP: 8 dígitos com ou sem hífen (12345-678 ou 12345678),
+  // regex pré-compilada no load da unit
+  Result := GCEPRegex.IsMatch(AValue);
 end;
 
 procedure RegisterCEPValidator;
 begin
   TFormatRegistry.RegisterValidator('cep', TCEPFormatValidator.Create('cep', 'CEP inválido'));
 end;
+
+initialization
+  GCEPRegex := TRegEx.Create('^\d{5}-?\d{3}$');
 
 end.

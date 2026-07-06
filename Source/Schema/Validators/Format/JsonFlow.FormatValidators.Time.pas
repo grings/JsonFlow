@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   JsonFlow
   High-performance JSON serialization, dynamic manipulation, and Draft 7 Schema validation framework for Delphi and Lazarus.
@@ -38,6 +38,11 @@ implementation
 uses
   JsonFlow.FormatRegistry;
 
+var
+  // Regexes compiladas UMA vez no load da unit (antes: TRegEx.Create
+  // por valor validado dentro do DoValidate)
+  GRegex1: TRegEx;
+
 { TTimeFormatValidator }
 
 constructor TTimeFormatValidator.Create;
@@ -59,7 +64,7 @@ begin
   end;
   
   // Primeiro verifica o formato HH:MM:SS ou HH:MM:SS.sss
-  LRegex := TRegEx.Create('^\d{2}:\d{2}:\d{2}(\.\d{3})?$');
+  LRegex := GRegex1;
   if not LRegex.IsMatch(AValue) then
   begin
     Result := False;
@@ -114,7 +119,7 @@ begin
     Result := 'Time cannot be empty'
   else
   begin
-    LRegex := TRegEx.Create('^\d{2}:\d{2}:\d{2}(\.\d{3})?$');
+    LRegex := GRegex1;
     if not LRegex.IsMatch(AValue) then
       Result := Format('String "%s" does not match time format HH:MM:SS or HH:MM:SS.sss', [AValue])
     else
@@ -150,5 +155,8 @@ procedure RegisterTimeValidator;
 begin
   TFormatRegistry.RegisterValidator('time', TTimeFormatValidator.Create);
 end;
+
+initialization
+  GRegex1 := TRegEx.Create('^\d{2}:\d{2}:\d{2}(\.\d{3})?$');
 
 end.
