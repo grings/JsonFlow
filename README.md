@@ -21,23 +21,22 @@
 
 ---
 
-**JsonFlow** is a state-of-the-art, high-performance, and feature-rich JSON manipulation, serialization, and JSON Schema validation framework for Delphi and Lazarus. It provides an enterprise-ready toolkit that integrates high-speed object serialization, in-place dynamic JSON editing, and robust Draft 7 JSON Schema validation under a unified, elegant, and fluent API. By incorporating custom navigation caching, batch mode optimizations, and multi-threaded object pooling, JsonFlow delivers unmatched native parsing and validation speeds for intensive web applications, APIs, and microservices.
+**JsonFlow** is a state-of-the-art, high-performance, and feature-rich JSON manipulation, serialization, and JSON Schema validation framework for Delphi and Lazarus. It provides an enterprise-ready toolkit that integrates high-speed object serialization, in-place dynamic JSON editing, and robust Draft 7 JSON Schema validation under a unified, elegant, and fluent API. Every hot path — parsing, RTTI marshalling, path-based editing, and schema validation — has been profiled and optimized against public, reproducible benchmarks, delivering native speeds for intensive web applications, APIs, and microservices.
 
 ### 🚀 Key Features
 
 *   **Advanced Serialization & Deserialization:** Fluidly convert Delphi objects to JSON structures and vice-versa using custom attributes, mapping rules, and extensible pipelines.
 *   **In-Place Dynamic Composer:** Load and modify complex JSON structures in-place. Traverse nested elements fluidly using path strings (e.g., `user.address[0].zip`).
 *   **Draft 7 JSON Schema Validation:** Fully validate JSON structures against Draft 7 specifications with detailed local error paths (`Path` and `SchemaPath`).
-*   **Massive Performance Enhancements:**
-    *   *Navigation Cache:* Up to 2.5× speed improvements for repeating JSON path traversals.
-    *   *Batch Processing:* Up to 3.4× faster operations for bulk updates.
-    *   *Object Pooling:* Thread-safe pooled composers yielding up to 3.0× faster creation/destruction cycles.
-*   **Extensible Middleware System:** Intercept, encrypt, decrypt, or format specific JSON fields (e.g., dates, currency, custom types) on the fly.
-*   **Asynchronous Validation Queue:** Multi-threaded, thread-safe background schema validation with prioritization.
+*   **Audited, Benchmark-Backed Performance** (July 2026 hot-path audit, reproducible console harnesses):
+    *   *Serialization/Deserialization:* up to 15× faster serialization and 6× faster deserialization than X-SuperObject (see charts below).
+    *   *Schema Validation:* 3.1× faster after identity-based compile caching and precompiled regex rules.
+    *   *Path-based Editing:* array inserts and path operations up to 33× faster via `IJSONArray.Insert` and reusable navigation.
+*   **Extensible Middleware System:** Intercept, encrypt, decrypt, or format specific JSON fields (e.g., dates, currency, custom types) on the fly — with a compiler-enforced contract validated at registration.
 
 ### 🏛 Compatibility Matrix
 
-| Environment / IDE | Platform / Compiler | Draft 7 Validator | Object Pooling |
+| Environment / IDE | Platform / Compiler | Draft 7 Validator | Custom Middlewares |
 | :--- | :--- | :---: | :---: |
 | **Delphi XE or superior** | VCL, FMX, Console (Win/Linux/macOS/iOS/Android) | ✅ Yes | ✅ Yes |
 | **Lazarus / FreePascal** | LCL, Console (Cross-platform) | ✅ Yes | ✅ Yes |
@@ -114,29 +113,16 @@ uses
   JsonFlow.Composer;
 
 var
-  LComposer: TJSONComposer;
-  LJsonInput, LUpdatedJson: string;
+  LComposer: IJSONComposer;
+  LUpdatedJson: string;
 begin
-  LJsonInput := '{"user":{"name":"John","age":30},"tags":["dev"]}';
-
   LComposer := TJSONComposer.Create;
-  try
-    LComposer.LoadJSON(LJsonInput);
+  LComposer.LoadJSON('{"user":{"name":"John","age":30},"tags":["dev"]}');
 
-    LComposer.EnableCache(1000); // Navigation cache optimization
-    LComposer.BeginBatch;
-    try
-      LComposer.SetValue('user.age', 31);
-      LComposer.AddToArray('tags', 'lead');
-      LComposer.SetValue('user.email', 'john@email.com');
-    finally
-      LComposer.EndBatch;
-    end;
+  LComposer.SetValue('user.age', 31);
+  LComposer.AddToArray('tags', 'lead');
 
-    LUpdatedJson := LComposer.Generate;
-  finally
-    LComposer.Free;
-  end;
+  LUpdatedJson := LComposer.ToJSON(False);
 end;
 ```
 

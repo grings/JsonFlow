@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{3F62596F-FD1E-422E-9B13-87D3A79D75DA}</ProjectGuid>
         <ProjectVersion>20.3</ProjectVersion>
@@ -96,9 +96,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="..\Source\JSON\Composition\JsonFlow.Arrays.pas"/>
-        <DCCReference Include="..\Source\JSON\Composition\JsonFlow.Composer.Enhanced.pas"/>
         <DCCReference Include="..\Source\JSON\Composition\JsonFlow.Composer.pas"/>
-        <DCCReference Include="..\Source\JSON\Composition\JsonFlow.Composer.Pool.pas"/>
         <DCCReference Include="..\Source\JSON\Composition\JsonFlow.Objects.pas"/>
         <DCCReference Include="..\Source\JSON\Composition\JsonFlow.Pair.pas"/>
         <DCCReference Include="..\Source\JSON\Core\JsonFlow.Converters.pas"/>
@@ -106,7 +104,6 @@
         <DCCReference Include="..\Source\JSON\Core\JsonFlow.Utils.pas"/>
         <DCCReference Include="..\Source\JSON\Core\JsonFlow.Value.pas"/>
         <DCCReference Include="..\Source\JSON\IO\JsonFlow.Converter.Dataset.pas"/>
-        <DCCReference Include="..\Source\JSON\IO\JsonFlow.Converter.XML.pas"/>
         <DCCReference Include="..\Source\JSON\IO\JsonFlow.Navigator.pas"/>
         <DCCReference Include="..\Source\JSON\IO\JsonFlow.Reader.pas"/>
         <DCCReference Include="..\Source\JSON\IO\JsonFlow.Serializer.Attributes.pas"/>
