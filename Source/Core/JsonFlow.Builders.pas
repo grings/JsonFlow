@@ -120,7 +120,13 @@ type
   strict private
     class var FNotifyEventSetValue: TNotifyEventSetValue;
     class var FNotifyEventGetValue: TNotifyEventGetValue;
-    class var FMiddlwareList: TList<IEventMiddleware>;
+    // Snapshot imutável: mutações (AddMiddleware/ClearMiddlewares) trocam o
+    // array inteiro sob lock; leitores iteram a referência local sem lock.
+    // Registre middlewares na inicialização — antes de haver serializações
+    // concorrentes (o TList anterior era iterado e mutado sem sincronização,
+    // corrompendo o enumerador em servidores multi-thread como o Horse).
+    class var FMiddlwareList: TArray<IEventMiddleware>;
+    class var FMiddlwareLock: TObject;
   strict private
     class function _ResolveValueArrayString(const AValue: Variant): TArray<String>; inline;
     class function _ResolveValueArrayInteger(const AValue: Variant): TArray<Integer>; inline;
@@ -371,7 +377,10 @@ begin
           if L_IsBoolean() then
             Result := AProperty.GetValue(AInstance).AsBoolean
           else
-            Result := GetEnumValue(LTypeInfo, AProperty.GetValue(AInstance).AsString) >= 0;
+            // Serializa o NOME do enum — a expressão anterior
+            // (GetEnumValue(...) >= 0) devolvia um Boolean, então todo enum
+            // não-boolean saía como "true" no JSON.
+            Result := GetEnumName(LTypeInfo, AProperty.GetValue(AInstance).AsOrdinal);
         end;
       tkArray, tkDynArray:
         begin
@@ -429,6 +438,7 @@ var
   LMiddleware: IEventMiddleware;
   LSetMw: ISetValueMiddleware;
   LValue: Variant;
+  LIntValue: Integer;
 
   function L_IsBoolean: Boolean;
   var
@@ -470,8 +480,11 @@ begin
           AProperty.SetValue(AInstance, TValue.From<String>(''))
         else
           AProperty.SetValue(AInstance, TValue.From<String>(LValue));
-      tkInteger, tkSet, tkInt64:
+      tkInteger, tkSet:
         AProperty.SetValue(AInstance, TValue.From<Integer>(LValue));
+      tkInt64:
+        // Caso separado do tkInteger: o From<Integer> truncava Int64 em 32 bits
+        AProperty.SetValue(AInstance, TValue.From<Int64>(LValue));
       tkFloat:
         if TVarData(LValue).VType <= varNull then
           AProperty.SetValue(AInstance, TValue.From<Double>(0.0))
@@ -495,8 +508,16 @@ begin
         begin
           if L_IsBoolean() then
             AProperty.SetValue(AInstance, TValue.From<Boolean>(LValue))
+          else if VarIsNumeric(LValue) then
+            AProperty.SetValue(AInstance, TValue.FromOrdinal(LTypeInfo, LValue))
           else
-            AProperty.SetValue(AInstance, TValue.FromVariant(LValue));
+          begin
+            // Aceita o NOME do enum (par do fix na serialização) — o
+            // FromVariant anterior gerava EInvalidCast com valor string.
+            LIntValue := GetEnumValue(LTypeInfo, VarToStr(LValue));
+            if LIntValue >= 0 then
+              AProperty.SetValue(AInstance, TValue.FromOrdinal(LTypeInfo, LIntValue));
+          end;
         end;
       tkArray, tkDynArray:
         begin
@@ -514,22 +535,34 @@ end;
 procedure TJsonBuilder.AddMiddleware(
   const AEventMiddleware: IEventMiddleware);
 begin
-  FMiddlwareList.Add(AEventMiddleware);
+  TMonitor.Enter(FMiddlwareLock);
+  try
+    FMiddlwareList := FMiddlwareList + [AEventMiddleware];
+  finally
+    TMonitor.Exit(FMiddlwareLock);
+  end;
 end;
 
 class constructor TJsonBuilder.Create;
 begin
-  FMiddlwareList := TList<IEventMiddleware>.Create;
+  FMiddlwareLock := TObject.Create;
+  FMiddlwareList := nil;
 end;
 
 class destructor TJsonBuilder.Destroy;
 begin
-  FMiddlwareList.Free;
+  FMiddlwareList := nil;
+  FMiddlwareLock.Free;
 end;
 
 class procedure TJsonBuilder.ClearMiddlewares;
 begin
-  FMiddlwareList.Clear;
+  TMonitor.Enter(FMiddlwareLock);
+  try
+    FMiddlwareList := nil;
+  finally
+    TMonitor.Exit(FMiddlwareLock);
+  end;
 end;
 
 function TJsonBuilder.DynArrayDoubleToJson(const AValue: TValue): String;
@@ -624,7 +657,10 @@ begin
     LItem := AType.Create;
     if not _JsonVariantData(LData.FJsonPair.Values[LFor]).ToObject(LItem) then
     begin
-      Result.Free;
+      // FreeAndNil + Free do item corrente: o Free simples deixava o chamador
+      // com ponteiro dangling e vazava o item ainda não adicionado à lista.
+      LItem.Free;
+      FreeAndNil(Result);
       Exit;
     end;
     Result.Add(LItem);
@@ -649,7 +685,10 @@ begin
     LItem := T.Create;
     if not _JsonVariantData(LData.FJsonPair.Values[LFor]).ToObject(LItem) then
     begin
-      Result.Free;
+      // FreeAndNil + Free do item corrente: o Free simples deixava o chamador
+      // com ponteiro dangling e vazava o item ainda não adicionado à lista.
+      LItem.Free;
+      FreeAndNil(Result);
       Exit;
     end;
     Result.Add(LItem);
@@ -672,8 +711,14 @@ end;
 function TJsonBuilder.JsonToObject<T>(const AJson: String): T;
 begin
   Result := T.Create;
-  if not JsonToObject(TObject(Result), AJson) then
-    raise Exception.Create('Error JSON to Object');
+  try
+    if not JsonToObject(TObject(Result), AJson) then
+      raise Exception.Create('Error JSON to Object');
+  except
+    // Sem o try/except a instância recém-criada vazava quando o parse falhava
+    Result.Free;
+    raise;
+  end;
 end;
 
 function TJsonBuilder.ObjectToJson(const AObject: TObject;

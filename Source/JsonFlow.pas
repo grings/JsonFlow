@@ -174,6 +174,9 @@ end;
 
 class procedure TJsonFlow._SetFormatSettings(const Value: TFormatSettings);
 begin
+  // ATENÇÃO: configuração GLOBAL sem sincronização — defina apenas na
+  // inicialização da aplicação, antes de haver serializações concorrentes
+  // (o record contém strings; escrita simultânea a leituras é race condition).
   GJsonFlowFormatSettings := Value;
 end;
 
@@ -208,7 +211,9 @@ begin
       if LFor < AObjectList.Count - 1 then
         LResultBuilder.Append(',');
     end;
-    LResultBuilder.ReplaceLastChar(']');
+    // Append em vez de ReplaceLastChar: o replace sobrescrevia o '}' final do
+    // último objeto, corrompendo a saída ('[{"a":1]'); lista vazia vira '[]'.
+    LResultBuilder.Append(']');
     Result := LResultBuilder.ToString;
   finally
     LResultBuilder.Free;
@@ -230,7 +235,9 @@ begin
       if LFor < AObjectList.Count - 1 then
         LResultBuilder.Append(',');
     end;
-    LResultBuilder.ReplaceLastChar(']');
+    // Append em vez de ReplaceLastChar: o replace sobrescrevia o '}' final do
+    // último objeto, corrompendo a saída ('[{"a":1]'); lista vazia vira '[]'.
+    LResultBuilder.Append(']');
     Result := LResultBuilder.ToString;
   finally
     LResultBuilder.Free;
