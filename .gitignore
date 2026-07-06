@@ -93,3 +93,6 @@ docs-src/.docusaurus/
 # Antigravity Local Customizations & Scratch scripts
 .agents/
 scratch/
+
+# Rival JSON libraries cloned locally for benchmarks (see Examples/VCL/JsonFlowBenchmarkXSO/README.md)
+temp_*/
