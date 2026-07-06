@@ -7,9 +7,7 @@ program Compiler;
 uses
   System.SysUtils,
   JsonFlow.Arrays in '..\Source\JSON\Composition\JsonFlow.Arrays.pas',
-  JsonFlow.Composer.Enhanced in '..\Source\JSON\Composition\JsonFlow.Composer.Enhanced.pas',
   JsonFlow.Composer in '..\Source\JSON\Composition\JsonFlow.Composer.pas',
-  JsonFlow.Composer.Pool in '..\Source\JSON\Composition\JsonFlow.Composer.Pool.pas',
   JsonFlow.Objects in '..\Source\JSON\Composition\JsonFlow.Objects.pas',
   JsonFlow.Pair in '..\Source\JSON\Composition\JsonFlow.Pair.pas',
   JsonFlow.Converters in '..\Source\JSON\Core\JsonFlow.Converters.pas',
@@ -17,7 +15,6 @@ uses
   JsonFlow.Utils in '..\Source\JSON\Core\JsonFlow.Utils.pas',
   JsonFlow.Value in '..\Source\JSON\Core\JsonFlow.Value.pas',
   JsonFlow.Converter.Dataset in '..\Source\JSON\IO\JsonFlow.Converter.Dataset.pas',
-  JsonFlow.Converter.XML in '..\Source\JSON\IO\JsonFlow.Converter.XML.pas',
   JsonFlow.Navigator in '..\Source\JSON\IO\JsonFlow.Navigator.pas',
   JsonFlow.Reader in '..\Source\JSON\IO\JsonFlow.Reader.pas',
   JsonFlow.Serializer.Attributes in '..\Source\JSON\IO\JsonFlow.Serializer.Attributes.pas',

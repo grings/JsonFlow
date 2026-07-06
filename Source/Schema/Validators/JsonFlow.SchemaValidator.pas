@@ -127,7 +127,6 @@ type
   // Configura??es do validador v2
   TValidatorConfig = record
     MaxRecursionDepth: Integer;
-    EnableAsyncValidation: Boolean;
     EnableDetailedLogging: Boolean; // Otimiza??o: controle de logging em produ??o
 
     class function Default: TValidatorConfig; static;
@@ -1450,7 +1449,6 @@ end;
 class function TValidatorConfig.Default: TValidatorConfig;
 begin
   Result.MaxRecursionDepth := 100;
-  Result.EnableAsyncValidation := False;
   Result.EnableDetailedLogging := False; // Otimiza??o: desabilitado por padr?o em produ??o
 end;
 
