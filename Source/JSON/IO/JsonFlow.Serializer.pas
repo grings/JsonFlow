@@ -76,7 +76,7 @@ type
     FContext: TRttiContext;
     FTypeCache: TDictionary<TClass, TPair<TRttiType, TList<TRttiProperty>>>;
     procedure _Log(const AMessage: string);
-    procedure _CacheType(AClass: TClass);
+    function _GetCachedType(AClass: TClass): TPair<TRttiType, TList<TRttiProperty>>;
     procedure _JSONToProperty(const AProperty: TRttiProperty; const AInstance: TObject;
       const AElement: IJSONElement);
     function _JSONFromProperty(const AProperty: TRttiProperty; const AInstance: TObject;
@@ -206,31 +206,34 @@ begin
     FLogProc(AMessage);
 end;
 
-procedure TJSONSerializer._CacheType(AClass: TClass);
+function TJSONSerializer._GetCachedType(AClass: TClass): TPair<TRttiType, TList<TRttiProperty>>;
 var
   LRttiType: TRttiType;
   LProperties: TList<TRttiProperty>;
   LProp: TRttiProperty;
 begin
-  if not FTypeCache.ContainsKey(AClass) then
-  begin
-    LRttiType := FContext.GetType(AClass);
-    if not Assigned(LRttiType) then
-      raise EInvalidOperation.Create('RTTI not available for class ' + AClass.ClassName);
-    LProperties := TList<TRttiProperty>.Create;
-    try
-      for LProp in LRttiType.GetProperties do
+  // TryGetValue único no hit — antes eram 2-3 buscas no dicionário por objeto
+  // (ContainsKey no _CacheType + FTypeCache[LClass] no chamador).
+  if FTypeCache.TryGetValue(AClass, Result) then
+    Exit;
+
+  LRttiType := FContext.GetType(AClass);
+  if not Assigned(LRttiType) then
+    raise EInvalidOperation.Create('RTTI not available for class ' + AClass.ClassName);
+  LProperties := TList<TRttiProperty>.Create;
+  try
+    for LProp in LRttiType.GetProperties do
+    begin
+      if LProp.IsReadable then
       begin
-        if LProp.IsReadable then
-        begin
-          LProperties.Add(LProp);
-        end;
+        LProperties.Add(LProp);
       end;
-      FTypeCache.Add(AClass, TPair<TRttiType, TList<TRttiProperty>>.Create(LRttiType, LProperties));
-    except
-      LProperties.Free;
-      raise;
     end;
+    Result := TPair<TRttiType, TList<TRttiProperty>>.Create(LRttiType, LProperties);
+    FTypeCache.Add(AClass, Result);
+  except
+    LProperties.Free;
+    raise;
   end;
 end;
 
@@ -511,7 +514,10 @@ begin
     tkFloat:
       if Supports(AElement, IJSONValue, LValueInterface) then
       begin
-        _Log('Property: ' + AProperty.Name + ', Class: ' + AInstance.ClassName + ', Value: ' + LValueInterface.AsJSON);
+        // Monta a mensagem só com log ativo — o argumento era avaliado sempre
+        // (3 concatenações + AsJSON) para cada propriedade float/date.
+        if Assigned(FLogProc) then
+          _Log('Property: ' + AProperty.Name + ', Class: ' + AInstance.ClassName + ', Value: ' + LValueInterface.AsJSON);
         if LValueInterface is TJSONValueDateTime then
           AProperty.SetValue(AInstance, TJSONValueDateTime(LValueInterface).Value)
         else if LValueInterface is TJSONValueFloat then
@@ -612,8 +618,7 @@ begin
     raise EArgumentNilException.Create('Object cannot be nil');
 
   LClass := AObject.ClassType;
-  _CacheType(LClass);
-  LTypeInfo := FTypeCache[LClass];
+  LTypeInfo := _GetCachedType(LClass);
 
   LJsonObj := TJSONObject.Create;
   try
@@ -676,8 +681,7 @@ begin
     raise EArgumentException.Create('Element must be a JSON object');
 
   LClass := AObject.ClassType;
-  _CacheType(LClass);
-  LTypeInfo := FTypeCache[LClass];
+  LTypeInfo := _GetCachedType(LClass);
 
   for LProp in LTypeInfo.Value do
   begin
@@ -835,8 +839,7 @@ begin
   end;
 
   LClass := AObject.ClassType;
-  _CacheType(LClass);
-  LTypeInfo := FTypeCache[LClass];
+  LTypeInfo := _GetCachedType(LClass);
 
   ABuilder.Append('{');
   LFirst := True;
