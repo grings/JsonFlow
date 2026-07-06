@@ -46,6 +46,14 @@ Abaixo está o gráfico comparativo demonstrando a superioridade de performance 
   <img src="assets/benchmarks.png" alt="Gráfico Comparativo de Performance do JsonFlow" width="800"/>
 </p>
 
+O JsonFlow também foi comparado com a popular biblioteca [X-SuperObject](https://github.com/onryldz/x-superobject) — cenário Complex Class (1K a 5K objetos `TCustomer` com `Address` e `Contacts` aninhados). Mediana de 3 execuções (Release, Win32) na escala de 5K: **deserialização ~5× mais rápida** (59ms vs 304ms) e **serialização ~12× mais rápida** (24ms vs 286ms):
+
+<p align="center">
+  <img src="assets/benchmarks-xsuperobject.png" alt="Gráfico Comparativo JsonFlow vs X-SuperObject" width="800"/>
+</p>
+
+> **Metodologia:** entidades e massas de dados idênticas para as duas bibliotecas (a mesma suíte usada na comparação com o TJSON nativo acima); o parse do texto JSON fica fora do cronômetro nos dois lados, então os gráficos medem o marshalling puro de objetos; o X-SuperObject recebeu enums como ordinal na entrada, pois a biblioteca não suporta enum como string. Código-fonte completo do benchmark: [`Examples/VCL/JsonFlowBenchmarkXSO`](Examples/VCL/JsonFlowBenchmarkXSO).
+
 ### 🐧 Build Multiplataforma — Win32 / Win64 / Linux64
 
 > **Win32 / Win64:** ✅ verificado (2026-06-20, backend real em produção). **Linux64:** as units usadas pelo backend compilam e rodam no Linux; um **build standalone do framework completo** esbarra hoje num **item interno (não-plataforma)** — `IEventMiddleware` está declarado em **ambas** `JsonFlow.Types` e `JsonFlow.Interfaces`, então puxar as duas é ambíguo. Escolher a declaração canônica é um follow-up — **não** é problema de plataforma.

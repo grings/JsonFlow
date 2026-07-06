@@ -50,7 +50,13 @@ Below is a comparison demonstrating JsonFlow's performance superiority against s
   <img src="assets/benchmarks.png" alt="JsonFlow Performance Comparison Chart" width="800"/>
 </p>
 
+JsonFlow was also benchmarked against the popular [X-SuperObject](https://github.com/onryldz/x-superobject) library — Complex Class scenario (1K to 5K `TCustomer` objects with nested `Address` and `Contacts`). Median of 3 runs (Release, Win32) at the 5K scale: **~5× faster deserialization** (59ms vs 304ms) and **~12× faster serialization** (24ms vs 286ms):
 
+<p align="center">
+  <img src="assets/benchmarks-xsuperobject.png" alt="JsonFlow vs X-SuperObject Performance Comparison Chart" width="800"/>
+</p>
+
+> **Methodology:** identical entities and datasets for both libraries (the same suite used in the native TJSON comparison above); JSON text parsing is excluded from the timings on both sides, so the charts measure pure object marshalling; X-SuperObject received enums as ordinals in its input, since the library does not support string enums. Full benchmark source: [`Examples/VCL/JsonFlowBenchmarkXSO`](Examples/VCL/JsonFlowBenchmarkXSO).
 
 ### 🐧 Cross-Platform Build — Win32 / Win64 / Linux64
 
