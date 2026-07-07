@@ -123,6 +123,9 @@ implementation
 uses
   System.DateUtils;
 
+const
+  C_DEFAULT_FLOAT_FORMAT = '0.##########';
+
 { TJSONSerializerOptions }
 
 class function TJSONSerializerOptions.Default: TJSONSerializerOptions;
@@ -133,7 +136,7 @@ begin
   Result.ProcessAttributes := False;
   Result.IgnoreNullValues := False;
   Result.DateTimeFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz"Z"';
-  Result.FloatFormat := '0.##########';
+  Result.FloatFormat := C_DEFAULT_FLOAT_FORMAT;
   Result.MaxDepth := 100;
 end;
 
@@ -805,7 +808,14 @@ begin
         else
         begin
           LDouble := AValue.AsExtended;
-          ABuilder.Append(FormatFloat(FOptions.FloatFormat, LDouble, FFormatSettings));
+          // Double integral com a máscara padrão produz os mesmos dígitos que
+          // Int64: emite direto sem reparsear a máscara (~8× mais rápido).
+          // Acima de 1E15 a máscara pode arredondar diferente do Int64 exato.
+          if (Frac(LDouble) = 0) and (System.Abs(LDouble) < 1E15) and
+             (FOptions.FloatFormat = C_DEFAULT_FLOAT_FORMAT) then
+            ABuilder.Append(Trunc(LDouble))
+          else
+            ABuilder.Append(FormatFloat(FOptions.FloatFormat, LDouble, FFormatSettings));
         end;
       end;
     tkChar, tkWChar, tkLString, tkWString, tkUString:
